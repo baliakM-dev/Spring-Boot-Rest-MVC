@@ -27,7 +27,7 @@ spring:
         maintainTimeStats: false
 
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: validate
     database: mysql
