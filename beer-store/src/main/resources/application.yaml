@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: beer-store
+
+  profiles:
+    active: localmysql
+
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        one-indexed-parameters: false
+        max-page-size: 100
+      sort:
+        sort-parameter: sort
+
+logging:
+  level:
+    com:
+      restmvc: DEBUG
