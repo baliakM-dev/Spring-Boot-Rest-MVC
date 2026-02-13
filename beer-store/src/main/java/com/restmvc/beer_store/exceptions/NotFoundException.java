@@ -1,7 +1,5 @@
 package com.restmvc.beer_store.exceptions;
 
-import lombok.Getter;
-
 /**
  * Exception thrown when a requested resource is not found.
  */
