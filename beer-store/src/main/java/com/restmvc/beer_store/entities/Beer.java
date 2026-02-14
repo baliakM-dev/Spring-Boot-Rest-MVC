@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
@@ -70,6 +71,16 @@ public class Beer {
      * <p>
      * CascadeType.PERSIST and MERGE allow saving categories with beer,
      * but won't delete categories when beer is deleted (correct behavior).
+     * <p>
+     * Category is loaded lazily to prevent N+1 queries.
+     * We intentionally avoid fetching join / EntityGraph on pageable queries
+     * to prevent in-memory pagination issues (HHH90003004).
+     * <p>
+     * Batch fetching is configured globally via:
+     * hibernate.default_batch_fetch_size
+     * <p>
+     * This allows To Hibernate to load categories in batches using
+     * a single "where beer_id in (...)" query instead of N+1.
      */
     @Builder.Default
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})

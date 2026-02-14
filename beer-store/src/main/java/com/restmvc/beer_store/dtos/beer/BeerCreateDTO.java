@@ -1,4 +1,4 @@
-package com.restmvc.beer_store.dtos;
+package com.restmvc.beer_store.dtos.beer;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,16 +12,11 @@ import java.util.UUID;
 /**
  * DTO for creating a new beer.
  * Includes optional category IDs to assign beer to categorize on creation.
- *
- * Example:
- * {
- *   "beerName": "Hop Explosion",
- *   "beerStyle": "IPA",
- *   "upc": "123456789",
- *   "quantityOnHand": 100,
- *   "price": 5.99,
- *   "categoryIds": ["uuid1", "uuid2"]  // Optional
- * }
+ * @param beerName beer name
+ * @param upc UPC barcode
+ * @param quantityOnHand quantity on hand
+ * @param price price
+ * @param categoryIds optional set of category UUIDs
  */
 public record BeerCreateDTO(
         @NotBlank(message = "Beer name is required")

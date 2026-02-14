@@ -1,6 +1,7 @@
 package com.restmvc.beer_store.mappers;
 
-import com.restmvc.beer_store.dtos.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.entities.Beer;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -40,4 +41,15 @@ public interface BeerMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "categories", ignore = true)
     Beer dtoToBeer(BeerCreateDTO beerCreateDTO);
+
+    /**
+     * Maps a {@link Beer} entity to a {@link BeerResponseDTO}.
+     *
+     * <p>This method is used to transform a Beer entity into a DTO suitable
+     * for API responses. It excludes sensitive or unnecessary fields.</p>
+     *
+     * @param beer Beer entity to be converted
+     * @return DTO representing the Beer entity
+     */
+    BeerResponseDTO beerToResponseDto(Beer beer);
 }

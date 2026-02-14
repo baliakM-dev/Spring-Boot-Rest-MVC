@@ -1,6 +1,7 @@
 package com.restmvc.beer_store.services;
 
-import com.restmvc.beer_store.dtos.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
 import com.restmvc.beer_store.exceptions.NotFoundException;
@@ -10,8 +11,11 @@ import com.restmvc.beer_store.repositories.BeerRepository;
 import com.restmvc.beer_store.repositories.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -45,9 +49,11 @@ public class BeerService {
     /**
      * Creates a new {@code Beer} entity based on the provided DTO.
      *
-     * <p>The method is transactional to ensure atomic persistence.
+     * <p>
+     * The method is transactional to ensure atomic persistence.
      * If any exception occurs during the process, the transaction
-     * will be rolled back automatically.</p>
+     * will be rolled back automatically.
+     * </p>
      *
      * @param beerCreateDTO data required to create a new beer
      * @return the unique identifier ({@link UUID}) of the newly created beer
@@ -56,7 +62,6 @@ public class BeerService {
     @Transactional
     public UUID createBeer(BeerCreateDTO beerCreateDTO) {
         log.info("Creating beer: {}", beerCreateDTO);
-
         // 1) validation
         validateUniqueBeerName(beerCreateDTO.beerName(), null);
         // 2) convert dto to entity
@@ -67,6 +72,50 @@ public class BeerService {
         Beer savedBeer = beerRepository.save(beer);
         log.info("Successfully created beer: id={}, name={}", savedBeer.getId(), savedBeer.getBeerName());
         return savedBeer.getId();
+    }
+
+    /**
+     * Retrieve a paginated list of beers (including categories) and optionally filter by name or UPC.
+     *
+     * <p>
+     * This method retrieves a paginated list of beers from the database, optionally filtering by beer name and UPC.
+     * It also allows for showing or hiding the inventory on hand for each beer.
+     * Returned data are with like operator inside SQL query
+     * </p>
+     *
+     * @param beerName name of the beer to filter by (optional)
+     * @param upc UPC barcode of the beer to filter by (optional)
+     * @param showInventoryOnHand quantity on hand flag (optional)
+     * @param pageable pagination parameters
+     * @return ({@link BeerResponseDTO})
+     */
+    @Transactional(readOnly = true)
+    public Page<BeerResponseDTO> getAllBeers(String beerName, String upc, boolean showInventoryOnHand, Pageable pageable) {
+        log.info("Retrieving beers: beerName={}, upc={}, showInventoryOnHand={}", beerName, upc, showInventoryOnHand);
+
+        // 1) Initial beerPage and StringUtils for filtering
+        Page<Beer> beerPage;
+        boolean hasName = StringUtils.hasText(beerName);
+        boolean hasUpc = StringUtils.hasText(upc);
+
+        // 2) Filter beers by name and upc if doesn't exist return all beers
+        if (hasName && hasUpc) {
+            beerPage = beerRepository
+                    .findAllByBeerNameContainingIgnoreCaseAndUpcContainingIgnoreCase(beerName, upc, pageable);
+        } else if (hasName) {
+            beerPage = beerRepository.findAllByBeerNameContainingIgnoreCase(beerName, pageable);
+        } else if (hasUpc) {
+            beerPage = beerRepository.findAllByUpcContainingIgnoreCase(upc, pageable);
+        } else {
+            beerPage = beerRepository.findAll(pageable);
+        }
+        // 3) Check if showInventoryOnHand is false, then quantityOnHand will be null
+        if (!showInventoryOnHand) {
+            beerPage.forEach(b -> b.setQuantityOnHand(null));
+        }
+
+        log.info("Successfully retrieved beers");
+        return beerPage.map(beerMapper::beerToResponseDto);
     }
 
     /**
