@@ -14,6 +14,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.UUID;
 
 /**
  * REST controller responsible for managing Beer resources.
@@ -77,10 +78,16 @@ public class BeerController {
     public ResponseEntity<Page<BeerResponseDTO>> getAllBeers(
             @RequestParam(required = false) String beerName,
             @RequestParam(required = false) String upc,
-            @RequestParam(required = false) boolean showInventoryOnHand,
+            @RequestParam(required = false) Boolean showInventoryOnHand,
             @PageableDefault(sort = "beerName", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         log.info("Retrieving beers: beerName={}, upc={}, showInventoryOnHand={}", beerName, upc, showInventoryOnHand);
         return ResponseEntity.ok(beerService.getAllBeers(beerName, upc, showInventoryOnHand, pageable));
+    }
+
+    @GetMapping(BASE_URL_ID)
+    public ResponseEntity<BeerResponseDTO> getBeerById(@PathVariable UUID beerId) {
+        log.info("Retrieving beer by ID: {}", beerId);
+        return ResponseEntity.ok(beerService.getBeerById(beerId));
     }
 }

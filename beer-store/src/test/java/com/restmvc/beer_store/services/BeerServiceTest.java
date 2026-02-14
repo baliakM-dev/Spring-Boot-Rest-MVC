@@ -3,8 +3,8 @@ package com.restmvc.beer_store.services;
 import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
-import com.restmvc.beer_store.exceptions.NotFoundException;
 import com.restmvc.beer_store.exceptions.ResourceAlreadyExistsExceptions;
+import com.restmvc.beer_store.exceptions.ResourceNotFoundException;
 import com.restmvc.beer_store.mappers.BeerMapper;
 import com.restmvc.beer_store.repositories.BeerRepository;
 import com.restmvc.beer_store.repositories.CategoryRepository;
@@ -270,7 +270,7 @@ class BeerServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> beerService.createBeer(dtoWithInvalidCategory))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Category")
                     .hasMessageContaining("not found");
 
@@ -300,7 +300,7 @@ class BeerServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> beerService.createBeer(dtoWithMixedCategories))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Category")
                     .hasMessageContaining(nonExistentId.toString());
 
@@ -425,7 +425,7 @@ class BeerServiceTest {
 
             // When/Then
             assertThatThrownBy(() -> beerService.createBeer(dto))
-                    .isInstanceOf(NotFoundException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining(id3.toString());
         }
     }

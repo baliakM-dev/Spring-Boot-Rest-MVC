@@ -3,9 +3,10 @@ package com.restmvc.beer_store.repositories;
 import com.restmvc.beer_store.entities.Beer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -92,6 +93,16 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
      * @return a page of beers
      */
     Page<Beer> findAll(Pageable pageable);
+
+    /**
+     * Loads Beer by id and eagerly fetches categories to avoid LazyInitializationException
+     *
+     * @param id beer id
+     * @return a beer
+     */
+    @EntityGraph(attributePaths = "categories")
+    Optional<Beer> findWithCategoriesById(UUID id);
+
 }
 
 

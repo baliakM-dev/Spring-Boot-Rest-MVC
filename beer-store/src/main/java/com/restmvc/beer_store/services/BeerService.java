@@ -4,8 +4,8 @@ import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
-import com.restmvc.beer_store.exceptions.NotFoundException;
 import com.restmvc.beer_store.exceptions.ResourceAlreadyExistsExceptions;
+import com.restmvc.beer_store.exceptions.ResourceNotFoundException;
 import com.restmvc.beer_store.mappers.BeerMapper;
 import com.restmvc.beer_store.repositories.BeerRepository;
 import com.restmvc.beer_store.repositories.CategoryRepository;
@@ -80,25 +80,26 @@ public class BeerService {
      * <p>
      * This method retrieves a paginated list of beers from the database, optionally filtering by beer name and UPC.
      * It also allows for showing or hiding the inventory on hand for each beer.
-     * Returned data are with like operator inside SQL query
+     * Returned data are with like operator inside an SQL query
      * </p>
      *
-     * @param beerName name of the beer to filter by (optional)
-     * @param upc UPC barcode of the beer to filter by (optional)
+     * @param beerName            name of the beer to filter by (optional)
+     * @param upc                 UPC barcode of the beer to filter by (optional)
      * @param showInventoryOnHand quantity on hand flag (optional)
-     * @param pageable pagination parameters
+     * @param pageable            pagination parameters
      * @return ({@link BeerResponseDTO})
      */
     @Transactional(readOnly = true)
-    public Page<BeerResponseDTO> getAllBeers(String beerName, String upc, boolean showInventoryOnHand, Pageable pageable) {
+    public Page<BeerResponseDTO> getAllBeers(String beerName, String upc, Boolean showInventoryOnHand, Pageable pageable) {
         log.info("Retrieving beers: beerName={}, upc={}, showInventoryOnHand={}", beerName, upc, showInventoryOnHand);
 
         // 1) Initial beerPage and StringUtils for filtering
         Page<Beer> beerPage;
         boolean hasName = StringUtils.hasText(beerName);
         boolean hasUpc = StringUtils.hasText(upc);
+        boolean includeInventory = Boolean.TRUE.equals(showInventoryOnHand);
 
-        // 2) Filter beers by name and upc if doesn't exist return all beers
+        // 2) Filter beers by name and upc if it doesn't exist return all beers
         if (hasName && hasUpc) {
             beerPage = beerRepository
                     .findAllByBeerNameContainingIgnoreCaseAndUpcContainingIgnoreCase(beerName, upc, pageable);
@@ -110,12 +111,28 @@ public class BeerService {
             beerPage = beerRepository.findAll(pageable);
         }
         // 3) Check if showInventoryOnHand is false, then quantityOnHand will be null
-        if (!showInventoryOnHand) {
+        if (!includeInventory) {
             beerPage.forEach(b -> b.setQuantityOnHand(null));
         }
 
         log.info("Successfully retrieved beers");
         return beerPage.map(beerMapper::beerToResponseDto);
+    }
+
+    /**
+     * Retrieve a beer by ID.
+     *
+     * <p>
+     *     Retrieves a beer by its unique identifier, including eagerly fetched categories.
+     *     Throws a ResourceNotFoundException if the beer is not found.
+     * </p>
+     * @param beerId beer id to retrieve
+     * @return {@link BeerResponseDTO} beer
+     */
+    @Transactional(readOnly = true)
+    public BeerResponseDTO getBeerById(UUID beerId) {
+        log.info("Retrieving beer by ID: {}", beerId);
+        return beerMapper.beerToResponseDto(getBeerOrThrow(beerId));
     }
 
     /**
@@ -159,7 +176,7 @@ public class BeerService {
             Set<UUID> missingIds = new HashSet<>(categoryIds);
             missingIds.removeAll(foundIds);
 
-            throw new NotFoundException(
+            throw new ResourceNotFoundException(
                     "Category",
                     "id",
                     missingIds.toString()
@@ -167,5 +184,16 @@ public class BeerService {
         }
 
         categories.forEach(beer::addCategory);
+    }
+
+    /**
+     * Check if beer exists and return it or throw an exception.
+     *
+     * @param beerId
+     * @return Beer or throw exception {@link ResourceNotFoundException}
+     */
+    private Beer getBeerOrThrow(UUID beerId) {
+        return beerRepository.findWithCategoriesById(beerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Beer", "id", beerId.toString()));
     }
 }
