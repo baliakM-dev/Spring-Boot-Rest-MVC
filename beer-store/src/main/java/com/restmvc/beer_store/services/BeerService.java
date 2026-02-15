@@ -164,8 +164,6 @@ public class BeerService {
         return beerMapper.beerToResponseDto(beerRepository.saveAndFlush(beer));
     }
 
-//                "createdAt": "2026-02-13T20:34:32.198494",
-//                        "updatedAt": "2026-02-13T20:34:32.198494"
     // ============================= Helper Methods =================================
 
     /**
