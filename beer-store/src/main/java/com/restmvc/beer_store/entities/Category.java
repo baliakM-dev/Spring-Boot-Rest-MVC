@@ -58,9 +58,6 @@ public class Category {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // NO beers field - unidirectional relationship!
-    // If you need to find beers by category, use a repository query instead.
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

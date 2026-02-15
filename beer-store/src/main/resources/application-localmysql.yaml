@@ -36,7 +36,12 @@ spring:
         generate_statistics: true
         show_sql: true
         format_sql: true
-        default_batch_fetch_size: 16
+        # Enables Hibernate batch fetching for LAZY associations.
+        # This prevents N+1 when loading collections (e.g. Beer.categories)
+        # without using fetch join (which would break pagination).
+        #
+        # DO NOT combine collection fetch join / EntityGraph with Pageable queries.
+        default_batch_fetch_size: 50
     open-in-view: false
 
 logging:

@@ -223,7 +223,7 @@ public class GlobalExceptionsHandler {
     /**
      * Handles exceptions when a requested resource is not found.
      *
-     * <p>This handler is triggered when a {@link NotFoundException} is thrown,
+     * <p>This handler is triggered when a {@link ResourceNotFoundException} is thrown,
      * typically during GET operations where the requested ID doesn't exist.</p>
      *
      * <p>Example response:
@@ -243,8 +243,8 @@ public class GlobalExceptionsHandler {
      * @param request the HTTP request that caused the exception
      * @return a {@link ProblemDetail} with HTTP 404 NOT FOUND status
      */
-    @ExceptionHandler(NotFoundException.class)
-    public ProblemDetail handleNotFound(NotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         log.warn("Resource not found: {}", ex.getMessage());
         return createProblemDetail(
                 HttpStatus.NOT_FOUND,
@@ -285,8 +285,6 @@ public class GlobalExceptionsHandler {
                 request);
 
     }
-
-//    @ExceptionHandler(DirectMethod)
 
     /**
      * Creates a standardized ProblemDetail response with common properties.

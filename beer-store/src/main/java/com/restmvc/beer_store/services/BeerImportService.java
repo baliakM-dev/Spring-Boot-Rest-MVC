@@ -3,7 +3,7 @@ package com.restmvc.beer_store.services;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.exceptions.CsvException;
-import com.restmvc.beer_store.dtos.BeerCsvRecord;
+import com.restmvc.beer_store.dtos.beer.BeerCsvRecord;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
 import com.restmvc.beer_store.repositories.BeerRepository;

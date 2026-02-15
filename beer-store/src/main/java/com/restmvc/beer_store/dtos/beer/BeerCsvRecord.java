@@ -1,4 +1,4 @@
-package com.restmvc.beer_store.dtos;
+package com.restmvc.beer_store.dtos.beer;
 
 import com.opencsv.bean.CsvBindByName;
 import jakarta.validation.constraints.NotBlank;
@@ -6,6 +6,18 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
+/**
+ * Data transfer object for CSV records.
+ * Include all fields from the CSV file.
+ * Example:
+ * {
+ *   "beerName": "IPA",
+ *   "upc": "123456789012",
+ *   "quantityOnHand": 100,
+ *   "price": 5.99,
+ *   "categories": "IPA;Pale Ale"
+ * }
+ */
 @Data
 public class BeerCsvRecord {
     @NotBlank
