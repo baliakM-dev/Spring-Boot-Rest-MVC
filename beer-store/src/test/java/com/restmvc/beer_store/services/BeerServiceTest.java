@@ -1,6 +1,8 @@
 package com.restmvc.beer_store.services;
 
-import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
+import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
 import com.restmvc.beer_store.exceptions.ResourceAlreadyExistsExceptions;
@@ -17,6 +19,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -28,7 +34,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link BeerService}.
- *
+ * <p>
  * Uses Mockito to isolate the service layer from dependencies.
  * Tests focus on business logic validation, data transformation,
  * and error handling.
@@ -49,14 +55,16 @@ class BeerServiceTest {
     @InjectMocks
     private BeerService beerService;
 
-    private BeerCreateDTO validBeerDTO;
+    private BeerCreateRequestDTO validBeerDTO;
     private Beer validBeer;
     private Category category1;
     private Category category2;
+    private BeerResponseDTO validBeerResponseDTO;
+    private BeerUpdateRequestDTO validUpdateDTO;
 
     @BeforeEach
     void setUp() {
-        validBeerDTO = new BeerCreateDTO(
+        validBeerDTO = new BeerCreateRequestDTO(
                 "Test Beer",
                 "123456",
                 100,
@@ -82,6 +90,23 @@ class BeerServiceTest {
                 .id(UUID.randomUUID())
                 .description("Craft")
                 .build();
+
+        validBeerResponseDTO = new BeerResponseDTO(
+                validBeer.getId(),
+                validBeer.getBeerName(),
+                validBeer.getUpc(),
+                validBeer.getQuantityOnHand(),
+                validBeer.getPrice(),
+                Set.of(),   // alebo namapované categories DTOčka ak máš
+                null,
+                null
+        );
+        validUpdateDTO = new BeerUpdateRequestDTO(
+                "Updated Beer",
+                "123456",
+                200,
+                new BigDecimal("12.34")
+        );
     }
 
     // ==================== Create Beer Tests ====================
@@ -114,7 +139,7 @@ class BeerServiceTest {
         void shouldCreateBeerWithSingleCategory() {
             // Given
             Set<UUID> categoryIds = Set.of(category1.getId());
-            BeerCreateDTO dtoWithCategory = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithCategory = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -142,7 +167,7 @@ class BeerServiceTest {
         void shouldCreateBeerWithMultipleCategories() {
             // Given
             Set<UUID> categoryIds = Set.of(category1.getId(), category2.getId());
-            BeerCreateDTO dtoWithCategories = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithCategories = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -168,7 +193,7 @@ class BeerServiceTest {
         @DisplayName("Should handle empty category set")
         void shouldHandleEmptyCategorySet() {
             // Given
-            BeerCreateDTO dtoWithEmptyCategories = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithEmptyCategories = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -233,7 +258,7 @@ class BeerServiceTest {
         @DisplayName("Should throw exception for duplicate name with different case")
         void shouldThrowExceptionForDuplicateNameDifferentCase() {
             // Given - trying to create "TEST BEER" when "Test Beer" exists
-            BeerCreateDTO uppercaseDTO = new BeerCreateDTO(
+            BeerCreateRequestDTO uppercaseDTO = new BeerCreateRequestDTO(
                     "TEST BEER",
                     "999999",
                     50,
@@ -256,7 +281,7 @@ class BeerServiceTest {
             // Given
             UUID nonExistentCategoryId = UUID.randomUUID();
             Set<UUID> categoryIds = Set.of(nonExistentCategoryId);
-            BeerCreateDTO dtoWithInvalidCategory = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithInvalidCategory = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -286,7 +311,7 @@ class BeerServiceTest {
             UUID nonExistentId = UUID.randomUUID();
             Set<UUID> categoryIds = Set.of(existingId, nonExistentId);
 
-            BeerCreateDTO dtoWithMixedCategories = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithMixedCategories = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -327,10 +352,10 @@ class BeerServiceTest {
             beerService.createBeer(validBeerDTO);
 
             // Then
-            ArgumentCaptor<BeerCreateDTO> dtoCaptor = ArgumentCaptor.forClass(BeerCreateDTO.class);
+            ArgumentCaptor<BeerCreateRequestDTO> dtoCaptor = ArgumentCaptor.forClass(BeerCreateRequestDTO.class);
             verify(beerMapper).dtoToBeer(dtoCaptor.capture());
 
-            BeerCreateDTO capturedDTO = dtoCaptor.getValue();
+            BeerCreateRequestDTO capturedDTO = dtoCaptor.getValue();
             assertThat(capturedDTO.beerName()).isEqualTo("Test Beer");
             assertThat(capturedDTO.upc()).isEqualTo("123456");
             assertThat(capturedDTO.quantityOnHand()).isEqualTo(100);
@@ -368,7 +393,7 @@ class BeerServiceTest {
         void shouldAddCategoriesToBeer() {
             // Given
             Set<UUID> categoryIds = Set.of(category1.getId(), category2.getId());
-            BeerCreateDTO dtoWithCategories = new BeerCreateDTO(
+            BeerCreateRequestDTO dtoWithCategories = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -408,7 +433,7 @@ class BeerServiceTest {
             UUID id3 = UUID.randomUUID();
             Set<UUID> categoryIds = Set.of(id1, id2, id3);
 
-            BeerCreateDTO dto = new BeerCreateDTO(
+            BeerCreateRequestDTO dto = new BeerCreateRequestDTO(
                     "Test Beer",
                     "123456",
                     100,
@@ -474,6 +499,433 @@ class BeerServiceTest {
 
             // Then
             assertThat(result).isNotNull();
+        }
+    }
+
+    // ==================== Get All Beers Tests ====================
+
+    @Nested
+    @DisplayName("Get All Beers Tests")
+    class GetAllBeersTests {
+
+        @Test
+        @DisplayName("Should return all Beers")
+        void shouldReturnAllBeers() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Beer> beerPage = new PageImpl<>(List.of(validBeer), pageable, 1);
+
+            when(beerRepository.findAll(pageable)).thenReturn(beerPage);
+            when(beerMapper.beerToResponseDto(validBeer)).thenReturn(validBeerResponseDTO);
+
+            Page<BeerResponseDTO> result = beerService.getAllBeers(null, null, true, pageable);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0)).isEqualToComparingFieldByField(validBeerResponseDTO);
+
+            verify(beerRepository).findAll(pageable);
+            verify(beerMapper).beerToResponseDto(validBeer);
+            verifyNoMoreInteractions(beerMapper);
+
+        }
+
+
+        @Test
+        @DisplayName("Should return empty list when no Beers exist")
+        void shouldReturnEmptyListWhenNoBeersExist() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Beer> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+            when(beerRepository.findAll(pageable)).thenReturn(emptyPage);
+
+            Page<BeerResponseDTO> result = beerService.getAllBeers(null, null, true, pageable);
+
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+
+            verify(beerRepository).findAll(pageable);
+            verifyNoInteractions(beerMapper);
+        }
+
+        @Test
+        @DisplayName("Should return Beers sorted by name")
+        void shouldReturnBeersSortedByName() {
+            Pageable pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("beerName").ascending());
+            Page<Beer> beerPage = new PageImpl<>(List.of(validBeer), pageable, 1);
+
+            when(beerRepository.findAll(pageable)).thenReturn(beerPage);
+            when(beerMapper.beerToResponseDto(validBeer)).thenReturn(validBeerResponseDTO);
+
+            beerService.getAllBeers(null, null, true, pageable);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(beerRepository).findAll(pageableCaptor.capture());
+
+            Pageable captured = pageableCaptor.getValue();
+            assertThat(captured.getSort().getOrderFor("beerName")).isNotNull();
+            assertThat(captured.getSort().getOrderFor("beerName").isAscending()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return Beers sorted by upc")
+        void shouldReturnBeersSortedByUpc() {
+            Pageable pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("upc").descending());
+            Page<Beer> beerPage = new PageImpl<>(List.of(validBeer), pageable, 1);
+
+            when(beerRepository.findAll(pageable)).thenReturn(beerPage);
+            when(beerMapper.beerToResponseDto(validBeer)).thenReturn(validBeerResponseDTO);
+
+            beerService.getAllBeers(null, null, true, pageable);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(beerRepository).findAll(pageableCaptor.capture());
+
+            Pageable captured = pageableCaptor.getValue();
+            assertThat(captured.getSort().getOrderFor("upc")).isNotNull();
+            assertThat(captured.getSort().getOrderFor("upc").isDescending()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should hide quantityOnHand when showInventoryOnHand is false")
+        void shouldHideInventoryWhenFlagFalse() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Beer beerWithQty = Beer.builder()
+                    .id(UUID.randomUUID())
+                    .beerName("Test Beer")
+                    .upc("123456")
+                    .quantityOnHand(100)
+                    .price(new BigDecimal("10.99"))
+                    .categories(new HashSet<>())
+                    .build();
+
+            Page<Beer> beerPage = new PageImpl<>(List.of(beerWithQty), pageable, 1);
+
+            when(beerRepository.findAll(pageable)).thenReturn(beerPage);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+
+            beerService.getAllBeers(null, null, false, pageable);
+
+            assertThat(beerWithQty.getQuantityOnHand()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Beer By Id Tests")
+    class GetBeerByIdTests {
+
+        @Test
+        @DisplayName("Should return Beer by ID")
+        void shouldReturnBeerById() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerMapper.beerToResponseDto(validBeer)).thenReturn(validBeerResponseDTO);
+
+            // When
+            BeerResponseDTO result = beerService.getBeerById(beerId);
+
+            // Then
+            assertThat(result).isEqualTo(validBeerResponseDTO);
+            assertThat(result).isNotNull();
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerMapper).beerToResponseDto(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should throw exception when Beer does not exist")
+        void shouldThrowExceptionWhenBeerDoesNotExist() throws Exception {
+            UUID randomId = UUID.randomUUID();
+            when(beerRepository.findWithCategoriesById(any())).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.getBeerById(randomId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining(randomId.toString());
+
+            verify(beerRepository).findWithCategoriesById(randomId);
+            verifyNoInteractions(beerMapper);
+        }
+    }
+
+    @Nested
+    @DisplayName("Update Beer By Id Tests")
+    class UpdateBeerByIdTests {
+
+        @Test
+        @DisplayName("Should update beer successfully")
+        void shouldUpdateBeerById() {
+            // Given
+            UUID beerId = validBeer.getId();
+            Beer updatedBeer = Beer.builder()
+                    .id(beerId)
+                    .beerName("Updated Beer")
+                    .upc("123456")
+                    .quantityOnHand(200)
+                    .price(new BigDecimal("12.34"))
+                    .categories(new HashSet<>())
+                    .build();
+
+            BeerResponseDTO updatedResponseDTO = new BeerResponseDTO(
+                    beerId,
+                    "Updated Beer",
+                    "123456",
+                    200,
+                    new BigDecimal("12.34"),
+                    Set.of(),
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(updatedBeer);
+            when(beerMapper.beerToResponseDto(updatedBeer)).thenReturn(updatedResponseDTO);
+            doNothing().when(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.updateBeerById(beerId, validUpdateDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.beerName()).isEqualTo("Updated Beer");
+            assertThat(result.price()).isEqualTo(new BigDecimal("12.34"));
+            assertThat(result.quantityOnHand()).isEqualTo(200);
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId);
+            verify(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+            verify(beerRepository).saveAndFlush(any(Beer.class));
+            verify(beerMapper).beerToResponseDto(updatedBeer);
+        }
+
+        @Test
+        @DisplayName("Should update beer without name validation when name stays the same")
+        void shouldUpdateBeerWithoutNameValidation() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerUpdateRequestDTO sameNameDTO = new BeerUpdateRequestDTO(
+                    "Test Beer",  // same name as validBeer
+                    "654321",     // different UPC
+                    150,
+                    new BigDecimal("11.99")
+            );
+
+            Beer updatedBeer = Beer.builder()
+                    .id(beerId)
+                    .beerName("Test Beer")
+                    .upc("654321")
+                    .quantityOnHand(150)
+                    .price(new BigDecimal("11.99"))
+                    .categories(new HashSet<>())
+                    .build();
+
+            BeerResponseDTO updatedResponseDTO = new BeerResponseDTO(
+                    beerId,
+                    "Test Beer",
+                    "654321",
+                    150,
+                    new BigDecimal("11.99"),
+                    Set.of(),
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(updatedBeer);
+            when(beerMapper.beerToResponseDto(updatedBeer)).thenReturn(updatedResponseDTO);
+            doNothing().when(beerMapper).updateBeerFromDto(sameNameDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.updateBeerById(beerId, sameNameDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.beerName()).isEqualTo("Test Beer");
+            assertThat(result.upc()).isEqualTo("654321");
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper).updateBeerFromDto(sameNameDTO, validBeer);
+            verify(beerRepository).saveAndFlush(any(Beer.class));
+        }
+
+        @Test
+        @DisplayName("Should handle case-insensitive name comparison")
+        void shouldHandleCaseInsensitiveNameComparison() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerUpdateRequestDTO upperCaseNameDTO = new BeerUpdateRequestDTO(
+                    "TEST BEER",  // same name but different case
+                    "654321",
+                    150,
+                    new BigDecimal("11.99")
+            );
+
+            Beer updatedBeer = Beer.builder()
+                    .id(beerId)
+                    .beerName("TEST BEER")
+                    .upc("654321")
+                    .quantityOnHand(150)
+                    .price(new BigDecimal("11.99"))
+                    .categories(new HashSet<>())
+                    .build();
+
+            BeerResponseDTO updatedResponseDTO = new BeerResponseDTO(
+                    beerId,
+                    "TEST BEER",
+                    "654321",
+                    150,
+                    new BigDecimal("11.99"),
+                    Set.of(),
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(updatedBeer);
+            when(beerMapper.beerToResponseDto(updatedBeer)).thenReturn(updatedResponseDTO);
+            doNothing().when(beerMapper).updateBeerFromDto(upperCaseNameDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.updateBeerById(beerId, upperCaseNameDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            // Should not check for duplicate since it's the same name (case-insensitive)
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when beer does not exist")
+        void shouldThrowExceptionWhenBeerDoesNotExist() {
+            // Given
+            UUID nonExistentId = UUID.randomUUID();
+
+            when(beerRepository.findWithCategoriesById(nonExistentId)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.updateBeerById(nonExistentId, validUpdateDTO))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining("id")
+                    .hasMessageContaining(nonExistentId.toString());
+
+            verify(beerRepository).findWithCategoriesById(nonExistentId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper, never()).updateBeerFromDto(any(), any());
+            verify(beerRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceAlreadyExistsException when beer name already exists")
+        void shouldThrowExceptionWhenBeerNameAlreadyExists() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId)).thenReturn(true);
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.updateBeerById(beerId, validUpdateDTO))
+                    .isInstanceOf(ResourceAlreadyExistsExceptions.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining("beerName")
+                    .hasMessageContaining("Updated Beer");
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId);
+            verify(beerMapper, never()).updateBeerFromDto(any(), any());
+            verify(beerRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should update only allowed fields")
+        void shouldUpdateOnlyAllowedFields() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+
+            // When
+            beerService.updateBeerById(beerId, validUpdateDTO);
+
+            // Then
+            // Verify that mapper was called (mapper is responsible for ignoring id, version, timestamps)
+            verify(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+        }
+
+        @Test
+        @DisplayName("Should call saveAndFlush instead of save")
+        void shouldCallSaveAndFlush() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+
+            // When
+            beerService.updateBeerById(beerId, validUpdateDTO);
+
+            // Then
+            verify(beerRepository).saveAndFlush(validBeer);
+            verify(beerRepository, never()).save(any(Beer.class));
+        }
+
+        @Test
+        @DisplayName("Should return updated BeerResponseDTO")
+        void shouldReturnUpdatedBeerResponseDTO() {
+            // Given
+            UUID beerId = validBeer.getId();
+            Beer updatedBeer = Beer.builder()
+                    .id(beerId)
+                    .beerName("Updated Beer")
+                    .upc("123456")
+                    .quantityOnHand(200)
+                    .price(new BigDecimal("12.34"))
+                    .categories(new HashSet<>())
+                    .build();
+
+            BeerResponseDTO expectedResponse = new BeerResponseDTO(
+                    beerId,
+                    "Updated Beer",
+                    "123456",
+                    200,
+                    new BigDecimal("12.34"),
+                    Set.of(),
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Updated Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(updatedBeer);
+            when(beerMapper.beerToResponseDto(updatedBeer)).thenReturn(expectedResponse);
+            doNothing().when(beerMapper).updateBeerFromDto(validUpdateDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.updateBeerById(beerId, validUpdateDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result).isEqualTo(expectedResponse);
+            assertThat(result.id()).isEqualTo(beerId);
+            assertThat(result.beerName()).isEqualTo("Updated Beer");
+
+            verify(beerMapper).beerToResponseDto(updatedBeer);
         }
     }
 }

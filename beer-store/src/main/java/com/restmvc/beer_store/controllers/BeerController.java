@@ -1,7 +1,8 @@
 package com.restmvc.beer_store.controllers;
 
-import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
+import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.services.BeerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,13 +48,13 @@ public class BeerController {
     /**
      * Create a new beer (optionally with category IDs)
      *
-     * @param beerCreateDTO The beer data to create
+     * @param beerCreateRequestDTO The beer data to create
      * @return status code 201 Created and location of created resource
      */
     @PostMapping(BASE_URL)
-    public ResponseEntity<Void> createBeer(@Validated @RequestBody BeerCreateDTO beerCreateDTO) {
-        log.info("Creating beer: {}", beerCreateDTO);
-        var savedBeer = beerService.createBeer(beerCreateDTO);
+    public ResponseEntity<Void> createBeer(@Validated @RequestBody BeerCreateRequestDTO beerCreateRequestDTO) {
+        log.info("Creating beer: {}", beerCreateRequestDTO);
+        var savedBeer = beerService.createBeer(beerCreateRequestDTO);
         return ResponseEntity.created(URI.create(BASE_URL + "/" + savedBeer)).build();
     }
 
@@ -85,9 +86,39 @@ public class BeerController {
         return ResponseEntity.ok(beerService.getAllBeers(beerName, upc, showInventoryOnHand, pageable));
     }
 
+    /**
+     * Retrieve a beer by ID (including categories)
+     * Example:
+     *
+     * <ul>
+     *     <li><b>GET</b> /api/v1/beers/{beerId} </li>
+     * </ul>
+     * @param beerId beer id to retrieve
+     * @return ({@link BeerResponseDTO})
+     */
     @GetMapping(BASE_URL_ID)
     public ResponseEntity<BeerResponseDTO> getBeerById(@PathVariable UUID beerId) {
         log.info("Retrieving beer by ID: {}", beerId);
         return ResponseEntity.ok(beerService.getBeerById(beerId));
+    }
+
+    /**
+     * Update a beer by ID
+     * Example:
+     *
+     * <ul>
+     *     <li><b>PUT</b> /api/v1/beers/{beerId} </li>
+     * </ul>
+     *
+     * @param beerId beer id to retrieve
+     * @param beerUpdateRequestDTO data to update the beer with
+     * @return ({@link BeerResponseDTO})
+     */
+    @PutMapping(BASE_URL_ID)
+    public ResponseEntity<BeerResponseDTO> updateBeerById(
+            @PathVariable UUID beerId,
+            @Validated @RequestBody BeerUpdateRequestDTO beerUpdateRequestDTO) {
+        log.info("Updating beer by ID: {}", beerId);
+        return ResponseEntity.ok(beerService.updateBeerById(beerId, beerUpdateRequestDTO));
     }
 }

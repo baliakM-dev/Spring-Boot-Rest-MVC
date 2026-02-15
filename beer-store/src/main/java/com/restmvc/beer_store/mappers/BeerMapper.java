@@ -1,14 +1,16 @@
 package com.restmvc.beer_store.mappers;
 
-import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
+import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 /**
  * MapStruct mapper responsible for converting between
- * {@link BeerCreateDTO} and {@link Beer} entity.
+ * {@link BeerCreateRequestDTO} and {@link Beer} entity.
  *
  * <p>This mapper is used to transform incoming API request data
  * into a persistable domain entity. It intentionally ignores
@@ -27,12 +29,12 @@ import org.mapstruct.Mapping;
 public interface BeerMapper {
 
     /**
-     * Maps a {@link BeerCreateDTO} to a new {@link Beer} entity instance.
+     * Maps a {@link BeerCreateRequestDTO} to a new {@link Beer} entity instance.
      *
      * <p>The resulting entity has not yet persisted and does not contain
      * generated identifiers or auditing fields.</p>
      *
-     * @param beerCreateDTO DTO containing data required to create a Beer
+     * @param beerCreateRequestDTO DTO containing data required to create a Beer
      * @return new {@link Beer} entity instance
      */
     @Mapping(target = "id", ignore = true)
@@ -40,7 +42,7 @@ public interface BeerMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "categories", ignore = true)
-    Beer dtoToBeer(BeerCreateDTO beerCreateDTO);
+    Beer dtoToBeer(BeerCreateRequestDTO beerCreateRequestDTO);
 
     /**
      * Maps a {@link Beer} entity to a {@link BeerResponseDTO}.
@@ -52,4 +54,19 @@ public interface BeerMapper {
      * @return DTO representing the Beer entity
      */
     BeerResponseDTO beerToResponseDto(Beer beer);
+
+    /**
+     * Updates a {@link Beer} entity from a {@link BeerUpdateRequestDTO}.
+     * <p>
+     *     Updates a Beer entity with data from a BeerUpdateRequestDTO.
+     *     Excludes fields that should not be updated, such as ID, version, createdAt, updatedAt, and categories.
+     * </p>
+     * @param beer Beer entity to be updated
+     * @param beerUpdateRequestDTO data to update the Beer entity with
+     */
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    void updateBeerFromDto(BeerUpdateRequestDTO beerUpdateRequestDTO, @MappingTarget Beer beer);
 }

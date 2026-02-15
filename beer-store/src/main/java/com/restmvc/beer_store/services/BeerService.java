@@ -1,7 +1,8 @@
 package com.restmvc.beer_store.services;
 
-import com.restmvc.beer_store.dtos.beer.BeerCreateDTO;
+import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
+import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
 import com.restmvc.beer_store.entities.Category;
 import com.restmvc.beer_store.exceptions.ResourceAlreadyExistsExceptions;
@@ -55,19 +56,19 @@ public class BeerService {
      * will be rolled back automatically.
      * </p>
      *
-     * @param beerCreateDTO data required to create a new beer
+     * @param beerCreateRequestDTO data required to create a new beer
      * @return the unique identifier ({@link UUID}) of the newly created beer
      * @throws IllegalArgumentException if input data is invalid
      */
     @Transactional
-    public UUID createBeer(BeerCreateDTO beerCreateDTO) {
-        log.info("Creating beer: {}", beerCreateDTO);
+    public UUID createBeer(BeerCreateRequestDTO beerCreateRequestDTO) {
+        log.info("Creating beer: {}", beerCreateRequestDTO);
         // 1) validation
-        validateUniqueBeerName(beerCreateDTO.beerName(), null);
+        validateUniqueBeerName(beerCreateRequestDTO.beerName(), null);
         // 2) convert dto to entity
-        Beer beer = beerMapper.dtoToBeer(beerCreateDTO);
+        Beer beer = beerMapper.dtoToBeer(beerCreateRequestDTO);
         // 3) associates existing categories with a beer if category IDs are provided.
-        associateCategoriesIfProvided(beer, beerCreateDTO.categoryIds());
+        associateCategoriesIfProvided(beer, beerCreateRequestDTO.categoryIds());
         // 4) save bees
         Beer savedBeer = beerRepository.save(beer);
         log.info("Successfully created beer: id={}, name={}", savedBeer.getId(), savedBeer.getBeerName());
@@ -123,9 +124,10 @@ public class BeerService {
      * Retrieve a beer by ID.
      *
      * <p>
-     *     Retrieves a beer by its unique identifier, including eagerly fetched categories.
-     *     Throws a ResourceNotFoundException if the beer is not found.
+     * Retrieves a beer by its unique identifier, including eagerly fetched categories.
+     * Throws a ResourceNotFoundException if the beer is not found.
      * </p>
+     *
      * @param beerId beer id to retrieve
      * @return {@link BeerResponseDTO} beer
      */
@@ -134,6 +136,37 @@ public class BeerService {
         log.info("Retrieving beer by ID: {}", beerId);
         return beerMapper.beerToResponseDto(getBeerOrThrow(beerId));
     }
+
+    /**
+     * Updates an existing beer with full replacement.
+     * Validation name uniqueness only if name is beeing changed.
+     * JPA auditing automatically updates the updatedAt timestamp.
+     *
+     * @param beerId               the beer id to update
+     * @param beerUpdateRequestDTO the data to update the beer with
+     * @return updated beer
+     * @throws ResourceNotFoundException if beer is not found
+     */
+    @Transactional
+    public BeerResponseDTO updateBeerById(UUID beerId, BeerUpdateRequestDTO beerUpdateRequestDTO) {
+        log.info("Updating beer with ID: {}", beerId);
+
+        // 1) Get beer or throw exception if not found
+        Beer beer = getBeerOrThrow(beerId);
+
+        // 2) Validate name uniqueness if name is beeing changed
+        if (!beer.getBeerName().equalsIgnoreCase(beerUpdateRequestDTO.beerName())) {
+            validateUniqueBeerName(beerUpdateRequestDTO.beerName(), beerId);
+        }
+
+        // 3) Update beer with new values
+        beerMapper.updateBeerFromDto(beerUpdateRequestDTO, beer);
+        return beerMapper.beerToResponseDto(beerRepository.saveAndFlush(beer));
+    }
+
+//                "createdAt": "2026-02-13T20:34:32.198494",
+//                        "updatedAt": "2026-02-13T20:34:32.198494"
+    // ============================= Helper Methods =================================
 
     /**
      * Validates that a beer name is unique.
@@ -163,7 +196,6 @@ public class BeerService {
      * @param categoryIds category IDs to associate with the beer
      */
     private void associateCategoriesIfProvided(Beer beer, Set<UUID> categoryIds) {
-
         if (categoryIds == null || categoryIds.isEmpty()) return;
 
         List<Category> categories = categoryRepository.findAllById(categoryIds);
@@ -179,17 +211,15 @@ public class BeerService {
             throw new ResourceNotFoundException(
                     "Category",
                     "id",
-                    missingIds.toString()
-            );
+                    missingIds.toString());
         }
-
         categories.forEach(beer::addCategory);
     }
 
     /**
      * Check if beer exists and return it or throw an exception.
      *
-     * @param beerId
+     * @param beerId beer id
      * @return Beer or throw exception {@link ResourceNotFoundException}
      */
     private Beer getBeerOrThrow(UUID beerId) {

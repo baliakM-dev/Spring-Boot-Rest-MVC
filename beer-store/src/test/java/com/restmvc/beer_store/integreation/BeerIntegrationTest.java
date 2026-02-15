@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -90,34 +91,52 @@ public class BeerIntegrationTest {
         return Category.builder().description(description).build();
     }
 
+// ==================== JSON Builders ====================
+
+    /**
+     * Creates JSON for beer creation/update.
+     * ✅ OPRAVENÉ: Správne handling null quantityOnHand
+     */
     private String createBeerJson(String beerName, String upc, Integer quantityOnHand, BigDecimal price) {
         String priceJson = (price == null) ? "0.00" : price.toString();
+        String qtyJson = (quantityOnHand == null) ? "null" : quantityOnHand.toString();
 
         return """
                  {
                  "beerName": "%s",
                  "upc": "%s",
-                 "quantityOnHand": %d,
+                 "quantityOnHand": %s,
                  "price": %s
                  }
-                """.formatted(escapeJson(beerName)
-                , escapeJson(upc)
-                , quantityOnHand
-                , priceJson
-        );
+                """.formatted(escapeJson(beerName), escapeJson(upc), qtyJson, priceJson);
     }
 
-    private String createCategoryJson(String description) {
+    /**
+     * Creates JSON for beer update.
+     * ✅ OPRAVENÉ: Správne handling null quantityOnHand
+     */
+    private String updateBeerJson(String beerName, String upc, Integer quantityOnHand, BigDecimal price) {
+        String priceJson = (price == null) ? "0.00" : price.toString();
+        String qtyJson = (quantityOnHand == null) ? "null" : quantityOnHand.toString();
+
         return """
-                 {
-                 "description": "%s"
-                 }
-                """.formatted(description);
+                {
+                "beerName": "%s",
+                "upc": "%s",
+                "quantityOnHand": %s,
+                "price": %s
+                }
+                """.formatted(escapeJson(beerName), escapeJson(upc), qtyJson, priceJson);
     }
 
+    /**
+     * Creates JSON for beer with categories.
+     * ✅ OPRAVENÉ: Správne handling null quantityOnHand
+     */
     private String createBeerWithCategories(String beerName, String upc, Integer quantityOnHand,
                                             BigDecimal price, Set<UUID> categoryIds) {
         String priceJson = (price == null) ? "0.00" : price.toString();
+        String qtyJson = (quantityOnHand == null) ? "null" : quantityOnHand.toString();
 
         String categoryIdsJson = (categoryIds == null || categoryIds.isEmpty()) ? "" :
                 categoryIds.stream()
@@ -126,18 +145,26 @@ public class BeerIntegrationTest {
                         .collect(Collectors.joining(", "));
 
         return """
-            {
-            "beerName": "%s",
-            "upc": "%s",
-            "quantityOnHand": %d,
-            "price": %s,
-            "categoryIds": [%s]
-            }
-            """.formatted(escapeJson(beerName),
+                {
+                "beerName": "%s",
+                "upc": "%s",
+                "quantityOnHand": %s,
+                "price": %s,
+                "categoryIds": [%s]
+                }
+                """.formatted(escapeJson(beerName),
                 escapeJson(upc),
-                quantityOnHand,
+                qtyJson,
                 priceJson,
-                categoryIdsJson);  // Changed from "categories" to "categoryIds"
+                categoryIdsJson);
+    }
+
+    private String createCategoryJson(String description) {
+        return """
+                 {
+                 "description": "%s"
+                 }
+                """.formatted(description);
     }
 
     private String escapeJson(String s) {
@@ -442,11 +469,11 @@ public class BeerIntegrationTest {
     }
 
     @Nested
-    @DisplayName("Edge Cases - Multiple Categories")
+    @DisplayName("Edge Cases - Multiple Categories and retrieve beer by id")
     class EdgeCasesMultipleCategories {
 
         @Test
-        @DisplayName("Should create beer with multiple categories (2 categories)")
+        @DisplayName("Should create beer with multiple categories (2 categories) and retrieve by id")
         void shouldCreateBeerWithTwoCategories() throws Exception {
             // Given
             Category cat1 = categoryRepository.save(createCategory("IPA"));
@@ -477,6 +504,18 @@ public class BeerIntegrationTest {
             assertThat(savedBeer.getCategories()).hasSize(2);
             assertThat(savedBeer.getCategories()).extracting(Category::getId)
                     .containsExactlyInAnyOrder(cat1.getId(), cat2.getId());
+
+            // Retrieve
+            mockMvc.perform(get(location)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Test Beer"))
+                    .andExpect(jsonPath("$.upc").value("123456"))
+                    .andExpect(jsonPath("$.price").value(10.99))
+                    .andExpect(jsonPath("$.quantityOnHand").value(100))
+                    .andExpect(jsonPath("$.categories").isArray())
+                    .andExpect(jsonPath("$.categories.length()").value(2))
+                    .andExpect(jsonPath("$.categories[*].description", containsInAnyOrder("IPA", "Craft")));
         }
 
         @Test
@@ -510,6 +549,16 @@ public class BeerIntegrationTest {
 
             assertThat(savedBeer).isNotNull();
             assertThat(savedBeer.getCategories()).hasSize(3);
+
+            // Retrieve
+            mockMvc.perform(get(location)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Test Beer"))
+                    .andExpect(jsonPath("$.upc").value("123456"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(100))
+                    .andExpect(jsonPath("$.categories.length()").value(3))
+                    .andExpect(jsonPath("$.categories[*].description", containsInAnyOrder("IPA", "Craft", "Premium")));
         }
 
         @Test
@@ -539,6 +588,16 @@ public class BeerIntegrationTest {
 
             assertThat(savedBeer).isNotNull();
             assertThat(savedBeer.getCategories()).isEmpty();
+
+            // Retrieve
+            mockMvc.perform(get(location)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Test Beer"))
+                    .andExpect(jsonPath("$.upc").value("123456"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(100))
+                    .andExpect(jsonPath("$.categories").isArray())
+                    .andExpect(jsonPath("$.categories.length()").value(0));
         }
     }
 
@@ -640,6 +699,497 @@ public class BeerIntegrationTest {
                             .content(malformedJson))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.title").value("Invalid JSON input"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Get all beers Tests")
+    class GetAllBeersTests {
+
+        @Test
+        @DisplayName("Should return all Beers")
+        void shouldReturnAllBeers() throws Exception {
+            // Given
+            repository.save(createBeer("Beer A", "111", 10, new BigDecimal("2.00")));
+            repository.save(createBeer("Beer B", "222", 20, new BigDecimal("3.00")));
+            repository.save(createBeer("Beer C", "333", 30, new BigDecimal("4.00")));
+
+            // When/Then
+            mockMvc.perform(get(BeerController.BASE_URL)
+                            .param("page", "0")
+                            .param("size", "10")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(3))
+                    .andExpect(jsonPath("$.page.totalElements").value(3))
+                    .andExpect(jsonPath("$.page.number").value(0))
+                    .andExpect(jsonPath("$.page.size").value(10));
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no Beers exist")
+        void shouldReturnEmptyListWhenNoBeersExist() throws Exception {
+            // Given - setUp() already deletes
+
+            // When/Then
+            mockMvc.perform(get(BeerController.BASE_URL)
+                            .param("page", "0")
+                            .param("size", "10")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(0))
+                    .andExpect(jsonPath("$.page.totalElements").value(0))
+                    .andExpect(jsonPath("$.page.totalPages").value(0));
+        }
+
+        @Test
+        @DisplayName("Should return Beers sorted by name")
+        void shouldReturnBeersFilteredByName() throws Exception {
+            // Given
+            repository.save(createBeer("Beer A", "111", 10, new BigDecimal("2.00")));
+            repository.save(createBeer("Beer B", "222", 20, new BigDecimal("3.00")));
+            repository.save(createBeer("Beer C", "333", 30, new BigDecimal("4.00")));
+
+            // When/Then
+            mockMvc.perform(get(BeerController.BASE_URL)
+                            .param("beerName", "beer A")
+                            .param("page", "0")
+                            .param("size", "10")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.page.totalElements").value(1));
+        }
+
+        @Test
+        @DisplayName("Should return Beers sorted by upc")
+        void shouldReturnBeersSortedByUpc() throws Exception {
+            // Given
+            repository.save(createBeer("Beer A", "111", 10, new BigDecimal("2.00")));
+            repository.save(createBeer("Beer B", "222", 20, new BigDecimal("3.00")));
+            repository.save(createBeer("Beer C", "333", 30, new BigDecimal("4.00")));
+
+            // When/Then
+            mockMvc.perform(get(BeerController.BASE_URL)
+                            .param("upc", "111")
+                            .param("page", "0")
+                            .param("size", "10")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.page.totalElements").value(1));
+        }
+
+        @Test
+        @DisplayName("Should return Beers sorted by price")
+        void shouldReturnBeersSortedByNameAndUpc() throws Exception {
+            // Given
+            repository.save(createBeer("Beer A", "111", 10, new BigDecimal("2.00")));
+            repository.save(createBeer("Beer B", "222", 20, new BigDecimal("3.00")));
+            repository.save(createBeer("Beer C", "333", 30, new BigDecimal("4.00")));
+
+            // When/Then
+            mockMvc.perform(get(BeerController.BASE_URL)
+                            .param("beerName", "beer A")
+                            .param("upc", "111")
+                            .param("page", "0")
+                            .param("size", "10")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.page.totalElements").value(1));
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Beer By Id Tests")
+    class GetBeerByIdTests {
+
+        @Test
+        @DisplayName("Should throw exception when Beer does not exist")
+        void shouldThrowExceptionWhenBeerDoesNotExist() throws Exception {
+            // Given
+            UUID invalidId1 = UUID.randomUUID();
+
+            // Then
+            mockMvc.perform(get(BeerController.BASE_URL + "/" + invalidId1)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.title").value("Resource not found"));
+        }
+    }
+
+
+    @Nested
+    @DisplayName("Update beer by ID tests")
+    class UpdateBeerByIdTests {
+
+        @Test
+        @DisplayName("Should successfully update beer with all fields")
+        void shouldUpdateBeerById() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String updateBeerJson = updateBeerJson("Updated Beer", "222", 50, new BigDecimal("5.99"));
+
+            // When - Update Beer
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateBeerJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(savedBeer.getId().toString()))
+                    .andExpect(jsonPath("$.beerName").value("Updated Beer"))
+                    .andExpect(jsonPath("$.upc").value("222"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(50))
+                    .andExpect(jsonPath("$.price").value(5.99));
+
+            // Then - Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer).isNotNull();
+            assertThat(updatedBeer.getBeerName()).isEqualTo("Updated Beer");
+            assertThat(updatedBeer.getUpc()).isEqualTo("222");
+            assertThat(updatedBeer.getQuantityOnHand()).isEqualTo(50);
+            assertThat(updatedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("5.99"));
+        }
+
+        @Test
+        @DisplayName("Should allow updating beer to same name with different case")
+        void shouldAllowUpdatingToSameNameDifferentCase() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("TEST BEER", "222", 20, new BigDecimal("3.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("TEST BEER"))
+                    .andExpect(jsonPath("$.upc").value("222"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(20))
+                    .andExpect(jsonPath("$.price").value(3.0));
+
+            // Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer.getBeerName()).isEqualTo("TEST BEER");
+        }
+
+        @Test
+        @DisplayName("Should allow updating beer keeping same name")
+        void shouldAllowUpdatingWithSameName() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "222", 20, new BigDecimal("3.00"));
+
+            // When/Then - Should succeed, name stays the same
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Test Beer"))
+                    .andExpect(jsonPath("$.upc").value("222"));
+        }
+
+        @Test
+        @DisplayName("Should return 404 when updating non-existent beer")
+        void shouldReturnNotFoundWhenBeerDoesNotExist() throws Exception {
+            // Given
+            UUID nonExistentId = UUID.randomUUID();
+            String updateJson = updateBeerJson("New Name", "999", 50, new BigDecimal("15.99"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + nonExistentId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.title").value("Resource not found"))
+                    .andExpect(jsonPath("$.detail").value(containsString("Beer")))
+                    .andExpect(jsonPath("$.detail").value(containsString(nonExistentId.toString())));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with invalid JSON")
+        void shouldReturnBadRequestWhenInvalidJson() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Beer A", "111", 10, new BigDecimal("2.00")));
+            String invalidJson = "{ invalid json }";
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Invalid JSON input"));
+        }
+
+        @Test
+        @DisplayName("Should return 409 when updating to existing beer name")
+        void shouldReturnConflictWhenBeerNameAlreadyExists() throws Exception {
+            // Given - Two different beers
+            Beer existingBeer = repository.save(createBeer("Existing Beer", "111", 10, new BigDecimal("2.00")));
+            Beer beerToUpdate = repository.save(createBeer("Beer To Update", "222", 20, new BigDecimal("3.00")));
+
+            // Try to update second beer to have the same name as first
+            String updateJson = updateBeerJson("Existing Beer", "333", 30, new BigDecimal("4.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + beerToUpdate.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Resource already exists"))
+                    .andExpect(jsonPath("$.detail").value(containsString("Beer")))
+                    .andExpect(jsonPath("$.detail").value(containsString("Existing Beer")));
+
+            // Verify original beer was not changed
+            Beer originalBeer = em.find(Beer.class, beerToUpdate.getId());
+            assertThat(originalBeer.getBeerName()).isEqualTo("Beer To Update");
+        }
+
+        @Test
+        @DisplayName("Should return 409 when updating to existing name with different case")
+        void shouldReturnConflictWhenUpdatingToExistingNameDifferentCase() throws Exception {
+            // Given
+            Beer existingBeer = repository.save(createBeer("Existing Beer", "111", 10, new BigDecimal("2.00")));
+            Beer beerToUpdate = repository.save(createBeer("Beer To Update", "222", 20, new BigDecimal("3.00")));
+
+            String updateJson = updateBeerJson("EXISTING BEER", "333", 30, new BigDecimal("4.00"));
+
+            // When/Then - Should fail because name exists (case-insensitive)
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + beerToUpdate.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Resource already exists"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with negative price")
+        void shouldReturnBadRequestWhenNegativePrice() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "111", 10, new BigDecimal("-5.99"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.price").exists())
+                    .andExpect(jsonPath("$.errors.price").value(containsString("positive")));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with zero price")
+        void shouldReturnBadRequestWhenZeroPrice() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "111", 10, BigDecimal.ZERO);
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.price").exists())
+                    .andExpect(jsonPath("$.errors.price").value(containsString("positive")));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with empty beer name")
+        void shouldReturnBadRequestWhenEmptyBeerName() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("", "111", 10, new BigDecimal("2.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.beerName").exists());
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with beer name exceeding max length")
+        void shouldReturnBadRequestWhenBeerNameTooLong() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String tooLongName = "A".repeat(51); // Max is 50
+            String updateJson = updateBeerJson(tooLongName, "111", 10, new BigDecimal("2.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.beerName").exists())
+                    .andExpect(jsonPath("$.errors.beerName").value(containsString("50")));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with empty UPC")
+        void shouldReturnBadRequestWhenEmptyUpc() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "", 10, new BigDecimal("2.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.upc").exists());
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with UPC exceeding max length")
+        void shouldReturnBadRequestWhenUpcTooLong() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String tooLongUpc = "1".repeat(51); // Max is 50
+            String updateJson = updateBeerJson("Test Beer", tooLongUpc, 10, new BigDecimal("2.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Validation failed"))
+                    .andExpect(jsonPath("$.errors.upc").exists())
+                    .andExpect(jsonPath("$.errors.upc").value(containsString("50")));
+        }
+
+        @Test
+        @DisplayName("Should accept very small positive price when updating")
+        void shouldAcceptVerySmallPositivePriceOnUpdate() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "111", 10, new BigDecimal("0.01"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.price").value(0.01));
+
+            // Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("0.01"));
+        }
+
+        @Test
+        @DisplayName("Should accept very large price when updating")
+        void shouldAcceptVeryLargePriceOnUpdate() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "111", 10, new BigDecimal("999999.99"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.price").value(999999.99));
+
+            // Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("999999.99"));
+        }
+
+        @Test
+        @DisplayName("Should update quantityOnHand to zero")
+        void shouldUpdateQuantityOnHandToZero() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 100, new BigDecimal("2.00")));
+            String updateJson = updateBeerJson("Test Beer", "111", 0, new BigDecimal("2.00"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.quantityOnHand").value(0));
+
+            // Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer.getQuantityOnHand()).isZero();
+        }
+
+        @Test
+        @DisplayName("Should update beer at maximum field lengths")
+        void shouldUpdateBeerAtMaxFieldLengths() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String maxLengthName = "A".repeat(50);
+            String maxLengthUpc = "1".repeat(50);
+            String updateJson = updateBeerJson(maxLengthName, maxLengthUpc, 100, new BigDecimal("10.99"));
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value(maxLengthName))
+                    .andExpect(jsonPath("$.upc").value(maxLengthUpc));
+
+            // Verify in database
+            Beer updatedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(updatedBeer.getBeerName()).hasSize(50);
+            assertThat(updatedBeer.getUpc()).hasSize(50);
+        }
+
+        @Test
+        @DisplayName("Should return 400 when updating with malformed UUID in path")
+        void shouldReturnBadRequestWhenMalformedUuidInPath() throws Exception {
+            // Given
+            String updateJson = updateBeerJson("Test Beer", "111", 10, new BigDecimal("2.00"));
+            String malformedUuid = "not-a-valid-uuid";
+
+            // When/Then
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + malformedUuid)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Should preserve createdAt timestamp after update")
+        void shouldPreserveCreatedAtTimestampAfterUpdate() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            em.flush();
+            em.clear();
+
+            Beer beforeUpdate = em.find(Beer.class, savedBeer.getId());
+            var originalCreatedAt = beforeUpdate.getCreatedAt();
+
+            String updateJson = updateBeerJson("Updated Beer", "222", 20, new BigDecimal("3.00"));
+
+            // When
+            mockMvc.perform(put(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(updateJson))
+                    .andExpect(status().isOk());
+
+            // Then - createdAt should remain the same
+            em.flush();
+            em.clear();
+            Beer afterUpdate = em.find(Beer.class, savedBeer.getId());
+
+            assertThat(afterUpdate.getCreatedAt()).isEqualTo(originalCreatedAt);
+            assertThat(afterUpdate.getUpdatedAt()).isNotNull();
+            assertThat(afterUpdate.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
         }
     }
 }

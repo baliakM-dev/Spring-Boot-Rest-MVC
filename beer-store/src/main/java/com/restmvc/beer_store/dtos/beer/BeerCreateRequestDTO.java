@@ -18,7 +18,7 @@ import java.util.UUID;
  * @param price price
  * @param categoryIds optional set of category UUIDs
  */
-public record BeerCreateDTO(
+public record BeerCreateRequestDTO(
         @NotBlank(message = "Beer name is required")
         @Size(min = 1, max = 50, message = "Beer name must be between 1 and 50 characters")
         String beerName,
@@ -38,6 +38,5 @@ public record BeerCreateDTO(
          * Categories must exist or validation will fail in the service layer.
          */
         Set<UUID> categoryIds
-) {
-}
+) {}
 
