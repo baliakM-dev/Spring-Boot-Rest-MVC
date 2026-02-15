@@ -25,9 +25,6 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
      * Checks whether a beer with the given name already exists
      * (case-insensitive comparison).
      *
-     * <p>Primarily used to enforce uniqueness validation
-     * before creating a new entity.</p>
-     *
      * @param beerName name of the beer to check
      * @return {@code true} if a beer with the given name exists, otherwise {@code false}
      */
@@ -38,9 +35,6 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
      * Checks whether a beer with the given name already exists,
      * excluding a specific entity by its identifier.
      *
-     * <p>Typically used during update operations to validate uniqueness
-     * while ignoring the current entity.</p>
-     *
      * @param beerName name of the beer to check
      * @param id       identifier of the entity to exclude from the check
      * @return {@code true} if another beer with the same name exists, otherwise {@code false}
@@ -49,7 +43,6 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
 
     /**
      * Find all beers by beer name (case-insensitive).
-     * Uses EntityGraph to eagerly fetch categories and prevent N+1.
      *
      * @param beerName the beer name to search for
      * @param pageable pagination parameters
@@ -59,7 +52,6 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
 
     /**
      * Find all beers by upc (case-insensitive).
-     * Uses EntityGraph to eagerly fetch categories and prevent N+1.
      *
      * @param upc      the UPC to search for
      * @param pageable pagination parameters
@@ -69,7 +61,6 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
 
     /**
      * Find all beers by beer name and upc (case-insensitive).
-     * Uses EntityGraph to eagerly fetch categories and prevent N+1.
      *
      * @param beerName the beer name to search for
      * @param upc      the upc to search for

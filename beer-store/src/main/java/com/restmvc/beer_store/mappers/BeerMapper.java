@@ -1,12 +1,11 @@
 package com.restmvc.beer_store.mappers;
 
 import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.BeerPatchRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
 
 /**
  * MapStruct mapper responsible for converting between
@@ -31,9 +30,6 @@ public interface BeerMapper {
     /**
      * Maps a {@link BeerCreateRequestDTO} to a new {@link Beer} entity instance.
      *
-     * <p>The resulting entity has not yet persisted and does not contain
-     * generated identifiers or auditing fields.</p>
-     *
      * @param beerCreateRequestDTO DTO containing data required to create a Beer
      * @return new {@link Beer} entity instance
      */
@@ -47,9 +43,6 @@ public interface BeerMapper {
     /**
      * Maps a {@link Beer} entity to a {@link BeerResponseDTO}.
      *
-     * <p>This method is used to transform a Beer entity into a DTO suitable
-     * for API responses. It excludes sensitive or unnecessary fields.</p>
-     *
      * @param beer Beer entity to be converted
      * @return DTO representing the Beer entity
      */
@@ -57,10 +50,7 @@ public interface BeerMapper {
 
     /**
      * Updates a {@link Beer} entity from a {@link BeerUpdateRequestDTO}.
-     * <p>
-     *     Updates a Beer entity with data from a BeerUpdateRequestDTO.
-     *     Excludes fields that should not be updated, such as ID, version, createdAt, updatedAt, and categories.
-     * </p>
+     *
      * @param beer Beer entity to be updated
      * @param beerUpdateRequestDTO data to update the Beer entity with
      */
@@ -69,4 +59,19 @@ public interface BeerMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     void updateBeerFromDto(BeerUpdateRequestDTO beerUpdateRequestDTO, @MappingTarget Beer beer);
+
+    /**
+     * Patches a {@link Beer} entity from a {@link BeerPatchRequestDTO}.
+     *
+     * @param beerPatchRequestDTO DTO containing data to patch the Beer entity with
+     * @param beer Beer entity to be patched
+     */
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "categories", ignore = true)
+    void patchBeerFromDto(BeerPatchRequestDTO beerPatchRequestDTO, @MappingTarget Beer beer);
+
 }

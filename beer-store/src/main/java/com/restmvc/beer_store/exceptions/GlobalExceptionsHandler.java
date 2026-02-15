@@ -286,8 +286,6 @@ public class GlobalExceptionsHandler {
 
     }
 
-//    @ExceptionHandler(DirectMethod)
-
     /**
      * Creates a standardized ProblemDetail response with common properties.
      *

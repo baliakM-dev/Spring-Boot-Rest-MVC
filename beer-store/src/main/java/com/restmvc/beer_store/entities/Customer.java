@@ -14,6 +14,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents a customer entity with fields for id, version, createdAt, updatedAt, and name.
+ * Uses JPA Auditing to automatically populate createdAt and updatedAt fields.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

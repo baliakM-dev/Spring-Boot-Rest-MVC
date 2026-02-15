@@ -1192,4 +1192,467 @@ public class BeerIntegrationTest {
             assertThat(afterUpdate.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
         }
     }
+
+    // ==================== PATCH BEER INTEGRATION TESTY ====================
+
+    @Nested
+    @DisplayName("Patch beer by ID tests")
+    class PatchBeerByIdTests {
+
+        /**
+         * Helper method to create JSON for partial beer patch.
+         * Null values are explicitly included in JSON.
+         */
+        private String patchBeerJson(String beerName, String upc, Integer quantityOnHand, BigDecimal price) {
+            StringBuilder json = new StringBuilder("{");
+            boolean needsComma = false;
+
+            if (beerName != null) {
+                json.append("\"beerName\": \"").append(escapeJson(beerName)).append("\"");
+                needsComma = true;
+            }
+
+            if (upc != null) {
+                if (needsComma) json.append(", ");
+                json.append("\"upc\": \"").append(escapeJson(upc)).append("\"");
+                needsComma = true;
+            }
+
+            if (quantityOnHand != null) {
+                if (needsComma) json.append(", ");
+                json.append("\"quantityOnHand\": ").append(quantityOnHand);
+                needsComma = true;
+            }
+
+            if (price != null) {
+                if (needsComma) json.append(", ");
+                json.append("\"price\": ").append(price);
+            }
+
+            json.append("}");
+            return json.toString();
+        }
+
+        @Test
+        @DisplayName("Should patch only beer name")
+        void shouldPatchOnlyBeerName() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson("Patched Name", null, null, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(savedBeer.getId().toString()))
+                    .andExpect(jsonPath("$.beerName").value("Patched Name"))
+                    .andExpect(jsonPath("$.upc").value("111"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(10))
+                    .andExpect(jsonPath("$.price").value(2.0));
+
+            // Then - Verify in database
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).isEqualTo("Patched Name");
+            assertThat(patchedBeer.getUpc()).isEqualTo("111"); // unchanged
+            assertThat(patchedBeer.getQuantityOnHand()).isEqualTo(10); // unchanged
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("2.00")); // unchanged
+        }
+
+        @Test
+        @DisplayName("Should patch only UPC")
+        void shouldPatchOnlyUpc() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, "999", null, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Original Beer"))
+                    .andExpect(jsonPath("$.upc").value("999"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(10))
+                    .andExpect(jsonPath("$.price").value(2.0));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getUpc()).isEqualTo("999");
+            assertThat(patchedBeer.getBeerName()).isEqualTo("Original Beer"); // unchanged
+        }
+
+        @Test
+        @DisplayName("Should patch only quantity on hand")
+        void shouldPatchOnlyQuantityOnHand() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, null, 500, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Original Beer"))
+                    .andExpect(jsonPath("$.upc").value("111"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(500))
+                    .andExpect(jsonPath("$.price").value(2.0));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getQuantityOnHand()).isEqualTo(500);
+        }
+
+        @Test
+        @DisplayName("Should patch only price")
+        void shouldPatchOnlyPrice() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, null, null, new BigDecimal("99.99"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Original Beer"))
+                    .andExpect(jsonPath("$.upc").value("111"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(10))
+                    .andExpect(jsonPath("$.price").value(99.99));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("99.99"));
+        }
+
+        @Test
+        @DisplayName("Should patch multiple fields (name and price)")
+        void shouldPatchMultipleFields() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson("Multi Patch", null, null, new BigDecimal("25.50"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Multi Patch"))
+                    .andExpect(jsonPath("$.upc").value("111")) // unchanged
+                    .andExpect(jsonPath("$.quantityOnHand").value(10)) // unchanged
+                    .andExpect(jsonPath("$.price").value(25.50));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).isEqualTo("Multi Patch");
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("25.50"));
+            assertThat(patchedBeer.getUpc()).isEqualTo("111");
+            assertThat(patchedBeer.getQuantityOnHand()).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("Should patch all fields")
+        void shouldPatchAllFields() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson("Fully Patched", "999", 300, new BigDecimal("50.00"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(savedBeer.getId().toString()))
+                    .andExpect(jsonPath("$.beerName").value("Fully Patched"))
+                    .andExpect(jsonPath("$.upc").value("999"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(300))
+                    .andExpect(jsonPath("$.price").value(50.0));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).isEqualTo("Fully Patched");
+            assertThat(patchedBeer.getUpc()).isEqualTo("999");
+            assertThat(patchedBeer.getQuantityOnHand()).isEqualTo(300);
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("50.00"));
+        }
+
+        @Test
+        @DisplayName("Should allow patching to same name with different case")
+        void shouldAllowPatchingToSameNameDifferentCase() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson("TEST BEER", null, null, null);
+
+            // When/Then
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("TEST BEER"));
+
+            // Verify in database
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).isEqualTo("TEST BEER");
+        }
+
+        @Test
+        @DisplayName("Should handle empty patch (all fields null)")
+        void shouldHandleEmptyPatch() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            String emptyPatchJson = "{}";
+
+            // When - Even with empty patch, beer should be returned unchanged
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(emptyPatchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value("Original Beer"))
+                    .andExpect(jsonPath("$.upc").value("111"))
+                    .andExpect(jsonPath("$.quantityOnHand").value(10))
+                    .andExpect(jsonPath("$.price").value(2.0));
+
+            // Then - Verify nothing changed
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).isEqualTo("Original Beer");
+            assertThat(patchedBeer.getUpc()).isEqualTo("111");
+            assertThat(patchedBeer.getQuantityOnHand()).isEqualTo(10);
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("2.00"));
+        }
+
+        @Test
+        @DisplayName("Should return 404 when patching non-existent beer")
+        void shouldReturnNotFoundWhenPatchingNonExistentBeer() throws Exception {
+            // Given
+            UUID nonExistentId = UUID.randomUUID();
+            String patchJson = patchBeerJson("New Name", null, null, null);
+
+            // When/Then
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + nonExistentId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.title").value("Resource not found"))
+                    .andExpect(jsonPath("$.detail").value(containsString("Beer")))
+                    .andExpect(jsonPath("$.detail").value(containsString(nonExistentId.toString())));
+        }
+
+        @Test
+        @DisplayName("Should return 409 when patching to existing beer name")
+        void shouldReturnConflictWhenPatchingToExistingName() throws Exception {
+            // Given - Two different beers
+            Beer existingBeer = repository.save(createBeer("Existing Beer", "111", 10, new BigDecimal("2.00")));
+            Beer beerToPatch = repository.save(createBeer("Beer To Patch", "222", 20, new BigDecimal("3.00")));
+
+            String patchJson = patchBeerJson("Existing Beer", null, null, null);
+
+            // When/Then
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + beerToPatch.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Resource already exists"))
+                    .andExpect(jsonPath("$.detail").value(containsString("Beer")))
+                    .andExpect(jsonPath("$.detail").value(containsString("Existing Beer")));
+
+            // Verify original beer was not changed
+            Beer originalBeer = em.find(Beer.class, beerToPatch.getId());
+            assertThat(originalBeer.getBeerName()).isEqualTo("Beer To Patch");
+        }
+
+        @Test
+        @DisplayName("Should return 409 when patching to existing name with different case")
+        void shouldReturnConflictWhenPatchingToExistingNameDifferentCase() throws Exception {
+            // Given
+            Beer existingBeer = repository.save(createBeer("Existing Beer", "111", 10, new BigDecimal("2.00")));
+            Beer beerToPatch = repository.save(createBeer("Beer To Patch", "222", 20, new BigDecimal("3.00")));
+
+            String patchJson = patchBeerJson("EXISTING BEER", null, null, null);
+
+            // When/Then - Should fail because name exists (case-insensitive)
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + beerToPatch.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Resource already exists"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when patching with invalid JSON")
+        void shouldReturnBadRequestWhenInvalidJson() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String invalidJson = "{ invalid json }";
+
+            // When/Then
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.title").value("Invalid JSON input"));
+        }
+
+        @Test
+        @DisplayName("Should patch quantity to zero")
+        void shouldPatchQuantityToZero() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 100, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, null, 0, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.quantityOnHand").value(0));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getQuantityOnHand()).isZero();
+        }
+
+        @Test
+        @DisplayName("Should patch beer name to maximum length")
+        void shouldPatchBeerNameToMaxLength() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Short Name", "111", 10, new BigDecimal("2.00")));
+            String maxLengthName = "A".repeat(50);
+            String patchJson = patchBeerJson(maxLengthName, null, null, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.beerName").value(maxLengthName));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getBeerName()).hasSize(50);
+        }
+
+        @Test
+        @DisplayName("Should patch UPC to maximum length")
+        void shouldPatchUpcToMaxLength() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String maxLengthUpc = "9".repeat(50);
+            String patchJson = patchBeerJson(null, maxLengthUpc, null, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.upc").value(maxLengthUpc));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getUpc()).hasSize(50);
+        }
+
+        @Test
+        @DisplayName("Should patch price to very small positive value")
+        void shouldPatchPriceToVerySmallValue() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, null, null, new BigDecimal("0.01"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.price").value(0.01));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("0.01"));
+        }
+
+        @Test
+        @DisplayName("Should patch price to very large value")
+        void shouldPatchPriceToVeryLargeValue() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+            String patchJson = patchBeerJson(null, null, null, new BigDecimal("999999.99"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.price").value(999999.99));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, savedBeer.getId());
+            assertThat(patchedBeer.getPrice()).isEqualByComparingTo(new BigDecimal("999999.99"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when patching with malformed UUID in path")
+        void shouldReturnBadRequestWhenMalformedUuidInPath() throws Exception {
+            // Given
+            String patchJson = patchBeerJson("Test Beer", null, null, null);
+            String malformedUuid = "not-a-valid-uuid";
+
+            // When/Then
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + malformedUuid)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Should preserve createdAt timestamp after patch")
+        void shouldPreserveCreatedAtTimestampAfterPatch() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            em.flush();
+            em.clear();
+
+            Beer beforePatch = em.find(Beer.class, savedBeer.getId());
+            var originalCreatedAt = beforePatch.getCreatedAt();
+
+            String patchJson = patchBeerJson("Patched Beer", null, null, null);
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + savedBeer.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk());
+
+            // Then - createdAt should remain the same
+            em.flush();
+            em.clear();
+            Beer afterPatch = em.find(Beer.class, savedBeer.getId());
+
+            assertThat(afterPatch.getCreatedAt()).isEqualTo(originalCreatedAt);
+            assertThat(afterPatch.getUpdatedAt()).isNotNull();
+            assertThat(afterPatch.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
+        }
+
+        @Test
+        @DisplayName("Should preserve ID after patch")
+        void shouldPreserveIdAfterPatch() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Original Beer", "111", 10, new BigDecimal("2.00")));
+            UUID originalId = savedBeer.getId();
+
+            String patchJson = patchBeerJson("Patched Beer", "999", 100, new BigDecimal("50.00"));
+
+            // When
+            mockMvc.perform(patch(BeerController.BASE_URL + "/" + originalId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(patchJson))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(originalId.toString()));
+
+            // Then
+            Beer patchedBeer = em.find(Beer.class, originalId);
+            assertThat(patchedBeer).isNotNull();
+            assertThat(patchedBeer.getId()).isEqualTo(originalId);
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package com.restmvc.beer_store.services;
 
 import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.BeerPatchRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
@@ -161,6 +162,35 @@ public class BeerService {
 
         // 3) Update beer with new values
         beerMapper.updateBeerFromDto(beerUpdateRequestDTO, beer);
+        return beerMapper.beerToResponseDto(beerRepository.saveAndFlush(beer));
+    }
+
+    /**
+     * Patches a beer by ID with the provided BeerPatchRequestDTO.
+     *
+     * <p>
+     *     Validates that the beer exists and updates it with the provided data.
+     *     If the beer name is being changed, ensures that the new name is unique.
+     * </p>
+     * @param beerId the beer id to patch
+     * @param beerPatchRequestDTO the data to patch the beer with
+     * @return updated beer response DTO
+     * @throws ResourceNotFoundException if beer is not found
+     */
+    @Transactional
+    public BeerResponseDTO patchBeerById(UUID beerId, BeerPatchRequestDTO beerPatchRequestDTO) {
+        log.info("Patching beer with ID: {}", beerId);
+
+        // 1) Get beer or throw exception if not found
+        Beer beer = getBeerOrThrow(beerId);
+
+        // 2) Validate name uniqueness if name is beeing changed
+        if (!beer.getBeerName().equalsIgnoreCase(beerPatchRequestDTO.beerName())) {
+            validateUniqueBeerName(beerPatchRequestDTO.beerName(), beerId);
+        }
+
+        // 3) Update beer with new values
+        beerMapper.patchBeerFromDto(beerPatchRequestDTO, beer);
         return beerMapper.beerToResponseDto(beerRepository.saveAndFlush(beer));
     }
 

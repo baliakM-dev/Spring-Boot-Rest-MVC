@@ -1,6 +1,7 @@
 package com.restmvc.beer_store.controllers;
 
 import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.BeerPatchRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.services.BeerService;
@@ -89,7 +90,6 @@ public class BeerController {
     /**
      * Retrieve a beer by ID (including categories)
      * Example:
-     *
      * <ul>
      *     <li><b>GET</b> /api/v1/beers/{beerId} </li>
      * </ul>
@@ -120,5 +120,24 @@ public class BeerController {
             @Validated @RequestBody BeerUpdateRequestDTO beerUpdateRequestDTO) {
         log.info("Updating beer by ID: {}", beerId);
         return ResponseEntity.ok(beerService.updateBeerById(beerId, beerUpdateRequestDTO));
+    }
+
+    /**
+     * Patch a beer by ID.
+     * Example:
+     * <ul>
+     *     <li><b>PATCH</b> /api/v1/beers/{beerId} </li>
+     * </ul>
+     *
+     * @param beerId beer id to retrieve
+     * @param beerPatchRequestDTO data to patch the beer with
+     * @return ({@link BeerResponseDTO})
+     */
+    @PatchMapping(BASE_URL_ID)
+    public ResponseEntity<BeerResponseDTO> patchBeerById(
+            @PathVariable UUID beerId,
+            @Validated @RequestBody BeerPatchRequestDTO beerPatchRequestDTO) {
+        log.info("Patching beer by ID: {}", beerId);
+        return ResponseEntity.ok(beerService.patchBeerById(beerId, beerPatchRequestDTO));
     }
 }

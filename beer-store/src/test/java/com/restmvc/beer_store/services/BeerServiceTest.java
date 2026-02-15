@@ -1,6 +1,7 @@
 package com.restmvc.beer_store.services;
 
 import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.BeerPatchRequestDTO;
 import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
 import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
 import com.restmvc.beer_store.entities.Beer;
@@ -97,7 +98,7 @@ class BeerServiceTest {
                 validBeer.getUpc(),
                 validBeer.getQuantityOnHand(),
                 validBeer.getPrice(),
-                Set.of(),   // alebo namapované categories DTOčka ak máš
+                Set.of(),
                 null,
                 null
         );
@@ -926,6 +927,396 @@ class BeerServiceTest {
             assertThat(result.beerName()).isEqualTo("Updated Beer");
 
             verify(beerMapper).beerToResponseDto(updatedBeer);
+        }
+    }
+
+    @Nested
+    @DisplayName("Patch Beer By Id Tests")
+    class PatchBeerByIdTests {
+
+        private BeerPatchRequestDTO patchNameOnlyDTO;
+        private BeerPatchRequestDTO patchUpcOnlyDTO;
+        private BeerPatchRequestDTO patchQuantityOnlyDTO;
+        private BeerPatchRequestDTO patchPriceOnlyDTO;
+        private BeerPatchRequestDTO patchAllFieldsDTO;
+        private BeerPatchRequestDTO patchMultipleFieldsDTO;
+
+        @BeforeEach
+        void setUpPatchDTOs() {
+            patchNameOnlyDTO = new BeerPatchRequestDTO(
+                    "Patched Name",
+                    null,
+                    null,
+                    null
+            );
+
+            patchUpcOnlyDTO = new BeerPatchRequestDTO(
+                    null,
+                    "999999",
+                    null,
+                    null
+            );
+
+            patchQuantityOnlyDTO = new BeerPatchRequestDTO(
+                    null,
+                    null,
+                    500,
+                    null
+            );
+
+            patchPriceOnlyDTO = new BeerPatchRequestDTO(
+                    null,
+                    null,
+                    null,
+                    new BigDecimal("99.99")
+            );
+
+            patchAllFieldsDTO = new BeerPatchRequestDTO(
+                    "Fully Patched Beer",
+                    "888888",
+                    300,
+                    new BigDecimal("25.50")
+            );
+
+            patchMultipleFieldsDTO = new BeerPatchRequestDTO(
+                    "Multi Patch Beer",
+                    "777777",
+                    null,
+                    new BigDecimal("15.99")
+            );
+        }
+
+        @Test
+        @DisplayName("Should patch only beer name")
+        void shouldPatchOnlyBeerName() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Patched Name", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchNameOnlyDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchNameOnlyDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Patched Name", beerId);
+            verify(beerMapper).patchBeerFromDto(patchNameOnlyDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+            verify(beerMapper).beerToResponseDto(any());
+        }
+
+        @Test
+        @DisplayName("Should patch only UPC")
+        void shouldPatchOnlyUpc() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchUpcOnlyDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchUpcOnlyDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            // Name is null, so no name validation should occur
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper).patchBeerFromDto(patchUpcOnlyDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should patch only quantity on hand")
+        void shouldPatchOnlyQuantityOnHand() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchQuantityOnlyDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchQuantityOnlyDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper).patchBeerFromDto(patchQuantityOnlyDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should patch only price")
+        void shouldPatchOnlyPrice() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchPriceOnlyDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchPriceOnlyDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper).patchBeerFromDto(patchPriceOnlyDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should patch all fields")
+        void shouldPatchAllFields() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Fully Patched Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchAllFieldsDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchAllFieldsDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Fully Patched Beer", beerId);
+            verify(beerMapper).patchBeerFromDto(patchAllFieldsDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should patch multiple fields (name, upc, price)")
+        void shouldPatchMultipleFields() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Multi Patch Beer", beerId)).thenReturn(false);
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchMultipleFieldsDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchMultipleFieldsDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Multi Patch Beer", beerId);
+            verify(beerMapper).patchBeerFromDto(patchMultipleFieldsDTO, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should skip name validation when name is null in patch")
+        void shouldSkipNameValidationWhenNameIsNull() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerPatchRequestDTO patchWithoutName = new BeerPatchRequestDTO(
+                    null,
+                    "999999",
+                    100,
+                    new BigDecimal("10.99")
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchWithoutName, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchWithoutName);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            // Name is null, so no validation should occur
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+        }
+
+        @Test
+        @DisplayName("Should skip name validation when patching to same name")
+        void shouldSkipNameValidationWhenSameName() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerPatchRequestDTO patchSameName = new BeerPatchRequestDTO(
+                    "Test Beer", // same as validBeer.getBeerName()
+                    "999999",
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchSameName, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchSameName);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            // Name is the same (case-insensitive), so no validation
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+        }
+
+        @Test
+        @DisplayName("Should handle case-insensitive name comparison in patch")
+        void shouldHandleCaseInsensitiveNameComparison() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerPatchRequestDTO patchUpperCase = new BeerPatchRequestDTO(
+                    "TEST BEER", // same name but different case
+                    null,
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchUpperCase, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchUpperCase);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            // Should not check for duplicates since it's the same name (case-insensitive)
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when beer does not exist")
+        void shouldThrowExceptionWhenBeerDoesNotExist() {
+            // Given
+            UUID nonExistentId = UUID.randomUUID();
+
+            when(beerRepository.findWithCategoriesById(nonExistentId)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.patchBeerById(nonExistentId, patchNameOnlyDTO))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining("id")
+                    .hasMessageContaining(nonExistentId.toString());
+
+            verify(beerRepository).findWithCategoriesById(nonExistentId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper, never()).patchBeerFromDto(any(), any());
+            verify(beerRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceAlreadyExistsException when patching to existing beer name")
+        void shouldThrowExceptionWhenPatchingToExistingName() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.existsByBeerNameIgnoreCaseAndIdNot("Patched Name", beerId)).thenReturn(true);
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.patchBeerById(beerId, patchNameOnlyDTO))
+                    .isInstanceOf(ResourceAlreadyExistsExceptions.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining("beerName")
+                    .hasMessageContaining("Patched Name");
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).existsByBeerNameIgnoreCaseAndIdNot("Patched Name", beerId);
+            verify(beerMapper, never()).patchBeerFromDto(any(), any());
+            verify(beerRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("Should use saveAndFlush instead of save")
+        void shouldCallSaveAndFlush() {
+            // Given
+            UUID beerId = validBeer.getId();
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(patchUpcOnlyDTO, validBeer);
+
+            // When
+            beerService.patchBeerById(beerId, patchUpcOnlyDTO);
+
+            // Then
+            verify(beerRepository).saveAndFlush(validBeer);
+            verify(beerRepository, never()).save(any(Beer.class));
+        }
+
+        @Test
+        @DisplayName("Should return BeerResponseDTO after patch")
+        void shouldReturnBeerResponseDTO() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerResponseDTO expectedResponse = new BeerResponseDTO(
+                    beerId,
+                    "Patched Beer",
+                    "999999",
+                    500,
+                    new BigDecimal("99.99"),
+                    Set.of(),
+                    null,
+                    null
+            );
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(validBeer)).thenReturn(expectedResponse);
+            doNothing().when(beerMapper).patchBeerFromDto(patchAllFieldsDTO, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, patchAllFieldsDTO);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result).isEqualTo(expectedResponse);
+            verify(beerMapper).beerToResponseDto(validBeer);
+        }
+
+        @Test
+        @DisplayName("Should handle empty patch DTO (all fields null)")
+        void shouldHandleEmptyPatchDTO() {
+            // Given
+            UUID beerId = validBeer.getId();
+            BeerPatchRequestDTO emptyPatch = new BeerPatchRequestDTO(null, null, null, null);
+
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            when(beerRepository.saveAndFlush(any(Beer.class))).thenReturn(validBeer);
+            when(beerMapper.beerToResponseDto(any())).thenReturn(validBeerResponseDTO);
+            doNothing().when(beerMapper).patchBeerFromDto(emptyPatch, validBeer);
+
+            // When
+            BeerResponseDTO result = beerService.patchBeerById(beerId, emptyPatch);
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository, never()).existsByBeerNameIgnoreCaseAndIdNot(anyString(), any(UUID.class));
+            verify(beerMapper).patchBeerFromDto(emptyPatch, validBeer);
+            verify(beerRepository).saveAndFlush(validBeer);
         }
     }
 }
