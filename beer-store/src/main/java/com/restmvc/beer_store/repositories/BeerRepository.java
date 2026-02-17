@@ -5,7 +5,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -94,6 +97,14 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
     @EntityGraph(attributePaths = "categories")
     Optional<Beer> findWithCategoriesById(UUID id);
 
+
+    @Query("""
+            select b
+                from Beer b
+                join b.categories c
+                where c.id = :categoryId
+            """)
+    Page<Beer> findBeersByCategoryId(UUID categoryId, Pageable pageable);
 }
 
 

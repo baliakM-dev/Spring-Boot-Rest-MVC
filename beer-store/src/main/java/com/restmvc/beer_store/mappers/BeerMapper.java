@@ -1,9 +1,7 @@
 package com.restmvc.beer_store.mappers;
 
-import com.restmvc.beer_store.dtos.beer.BeerCreateRequestDTO;
-import com.restmvc.beer_store.dtos.beer.BeerPatchRequestDTO;
-import com.restmvc.beer_store.dtos.beer.BeerResponseDTO;
-import com.restmvc.beer_store.dtos.beer.BeerUpdateRequestDTO;
+import com.restmvc.beer_store.dtos.beer.*;
+import com.restmvc.beer_store.dtos.beerCategory.BeerListItemDTO;
 import com.restmvc.beer_store.entities.Beer;
 import org.mapstruct.*;
 
@@ -74,4 +72,11 @@ public interface BeerMapper {
     @Mapping(target = "categories", ignore = true)
     void patchBeerFromDto(BeerPatchRequestDTO beerPatchRequestDTO, @MappingTarget Beer beer);
 
+    /**
+     * Converts a {@link Beer} entity to a {@link BeerListItemDTO}.
+     *
+     * @param beer Beer entity to be converted
+     * @return {@link BeerListItemDTO} representing the Beer entity
+     */
+    BeerListItemDTO beerToBeerListItemDto(Beer beer);
 }

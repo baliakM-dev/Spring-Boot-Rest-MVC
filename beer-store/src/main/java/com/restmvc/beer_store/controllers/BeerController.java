@@ -72,7 +72,7 @@ public class BeerController {
      *
      * @param beerName beer name to filter by (optional)
      * @param upc UPC barcode to filter by (optional)
-     * @param showInventoryOnHand quantity on hand flag (optional)
+     * @param showInventoryOnHand quantity on a hand flag (optional)
      * @param pageable pagination parameters
      * @return a page of beers matching the filter criteria
      */

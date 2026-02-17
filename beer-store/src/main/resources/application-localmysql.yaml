@@ -41,7 +41,7 @@ spring:
         # without using fetch join (which would break pagination).
         #
         # DO NOT combine collection fetch join / EntityGraph with Pageable queries.
-        default_batch_fetch_size: 50
+        default_batch_fetch_size: 20
     open-in-view: false
 
 logging:
