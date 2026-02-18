@@ -1,7 +1,6 @@
 spring:
   flyway:
     enabled: true
-
   docker:
     compose:
       enabled: true
@@ -44,6 +43,16 @@ spring:
         default_batch_fetch_size: 50
     open-in-view: false
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+    endpoint:
+      health:
+        probes:
+          enabled: true
+          
 logging:
   level:
     org:
