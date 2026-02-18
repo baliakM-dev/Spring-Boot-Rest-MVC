@@ -2,6 +2,7 @@ spring:
   threads:
     virtual:
       enabled: true
+
   application:
     name: beer-client-resttemplate
   web:
@@ -12,7 +13,7 @@ spring:
       enabled: true
 
 beer-store:
-  base-url: http://localhost:8080
+  base-url: ${BEER_API_BASE_URL:http://localhost:8080}
 
 server:
   port: 8082
@@ -22,4 +23,3 @@ logging:
     org.springframework.web.client.RestTemplate: DEBUG
     org.springframework.http.converter.json: DEBUG
 
-# resilience4j sekcia - ZMAZANÁ, konfigurujeme programaticky

@@ -45,9 +45,26 @@ services:
     environment:
       - BEER_API_BASE_URL=http://beer-store:8080
     depends_on:
-      - beer-store
+      beer-store:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  beer-client-restclient:
+    build:
+      context: ./beer-client-restclient
+    ports:
+      - "8083:8083"
+    environment:
+      - BEER_API_BASE_URL=http://beer-store:8080
+    depends_on:
+      beer-store:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health" ]
       interval: 5s
       timeout: 3s
       retries: 20
