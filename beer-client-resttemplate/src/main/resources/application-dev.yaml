@@ -23,5 +23,5 @@ management:
 
 logging:
   level:
-    org.springframework.web.client.RestClient: DEBUG
+    org.springframework.web.client.RestTemplate: DEBUG
     org.springframework.http.converter.json: DEBUG

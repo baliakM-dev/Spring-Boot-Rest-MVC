@@ -42,8 +42,13 @@ services:
       context: ./beer-client-resttemplate
     ports:
       - "8082:8082"
+      - "5003:5005"
     environment:
+      - SPRING_PROFILES_ACTIVE=dev
       - BEER_API_BASE_URL=http://beer-store:8080
+    volumes:
+      - ./beer-client-resttemplate:/app
+      - ~/.m2:/root/.m2
     depends_on:
       beer-store:
         condition: service_healthy
