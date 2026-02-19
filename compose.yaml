@@ -68,3 +68,27 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  beer-client-httpexchange:
+    build:
+      context: ./beer-client-httpexchange
+    ports:
+      - "8084:8084"
+      - "5085:5085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - BEER_API_BASE_URL=http://beer-store:8080
+    volumes:
+      - ./beer-client-httpexchange:/app
+      - ~/.m2:/root/.m2
+    depends_on:
+      beer-store:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  m2:
