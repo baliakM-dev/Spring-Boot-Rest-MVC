@@ -194,6 +194,19 @@ public class BeerService {
         return beerMapper.beerToResponseDto(beerRepository.saveAndFlush(beer));
     }
 
+    /**
+     * Deletes a beer by ID.
+     *
+     * @param beerId beer id to delete
+     * @throws ResourceNotFoundException if beer is not found
+     * @return no content
+     */
+    @Transactional
+    public void deleteBeerById(UUID beerId) {
+        log.info("Deleting beer with ID: {}", beerId);
+        beerRepository.deleteById(getBeerOrThrow(beerId).getId());
+    }
+
     // ============================= Helper Methods =================================
 
     /**

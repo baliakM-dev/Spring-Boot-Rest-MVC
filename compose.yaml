@@ -30,8 +30,11 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    volumes:
+      - ./beer-store:/app
+      - ~/.m2:/root/.m2
     environment:
-      - SPRING_PROFILES_ACTIVE=localmysql
+      - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/restdb
       - SPRING_DATASOURCE_USERNAME=restadmin
       - SPRING_DATASOURCE_PASSWORD=password

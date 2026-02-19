@@ -3,7 +3,7 @@ spring:
     name: beer-store
 
   profiles:
-    active: localmysql
+    active: dev
 
   data:
     web:

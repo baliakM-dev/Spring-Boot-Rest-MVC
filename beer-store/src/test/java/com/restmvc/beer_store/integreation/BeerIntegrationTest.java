@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.Set;
@@ -66,8 +65,6 @@ public class BeerIntegrationTest {
     private BeerRepository repository;
     @Autowired
     private EntityManager em;
-    @Autowired
-    private ObjectMapper om;
     @Autowired
     private CategoryRepository categoryRepository;
 
@@ -1655,4 +1652,47 @@ public class BeerIntegrationTest {
             assertThat(patchedBeer.getId()).isEqualTo(originalId);
         }
     }
+    // ==================== DELETE BEER INTEGRATION TESTY ====================
+
+    @Nested
+    @DisplayName("Delete beer by ID tests")
+    class DeleteBeerByIdTests {
+
+        @Test
+        @DisplayName("Should delete beer by ID")
+        void shouldDeleteBeerById() throws Exception {
+            // Given
+            Beer savedBeer = repository.save(createBeer("Test Beer", "111", 10, new BigDecimal("2.00")));
+
+            // When
+            mockMvc.perform(delete(BeerController.BASE_URL + "/" + savedBeer.getId()))
+                    .andExpect(status().isNoContent());
+
+            // Then
+            assertThat(repository.findById(savedBeer.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should return 400 when beer ID is invalid")
+        void shouldReturn404WhenBeerIdIsInvalid() throws Exception {
+            // Given - Invalid UUID
+            String invalidId = "not-a-valid-uuid";
+
+            // When
+            mockMvc.perform(delete(BeerController.BASE_URL + "/" + invalidId))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Should return 404 when beer ID not found")
+        void shoulReturn404WhenBeerNotFound() throws Exception {
+            // Given - Non-existent UUID
+            UUID nonExistentId = UUID.randomUUID();
+
+            // When
+            mockMvc.perform(delete(BeerController.BASE_URL + "/" + nonExistentId))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
 }

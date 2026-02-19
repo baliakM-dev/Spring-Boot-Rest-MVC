@@ -1,21 +1,25 @@
 package com.restmvc.beer_store.config;
 
-import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * Configuration for JPA Auditing.
  *
- * Enables automatic population of @CreatedDate and @LastModifiedDate fields.
- * This eliminates the need for manual timestamp management in service layer.
+ * <p>Enables automatic population of {@code @CreatedDate} and {@code @LastModifiedDate}
+ * fields on entities annotated with {@code @EntityListeners(AuditingEntityListener.class)}.
+ * This eliminates the need for manual timestamp management in the service layer.</p>
  */
+@Slf4j
 @Configuration
 @EnableJpaAuditing
 public class JpaConfig {
 
     @PostConstruct
     void init() {
-        System.out.println(">>> JpaConfig loaded, JPA auditing enabled");
+        log.debug("JpaConfig loaded – JPA auditing enabled");
     }
 }
