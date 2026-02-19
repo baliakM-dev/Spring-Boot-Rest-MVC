@@ -5,21 +5,10 @@ spring:
 
   application:
     name: beer-client-resttemplate
-  web:
-    error:
-      include-stacktrace: never
-  docker:
-    compose:
-      enabled: true
-
-beer-store:
-  base-url: ${BEER_API_BASE_URL:http://localhost:8080}
+  profiles:
+    active: dev
 
 server:
   port: 8082
 
-logging:
-  level:
-    org.springframework.web.client.RestTemplate: DEBUG
-    org.springframework.http.converter.json: DEBUG
 

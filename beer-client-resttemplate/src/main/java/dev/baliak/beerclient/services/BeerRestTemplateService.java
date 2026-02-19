@@ -108,7 +108,7 @@ public class BeerRestTemplateService {
      */
     public PagedResponse<BeerResponseDTO> getAllBeers(
             String beerName, String upc, Boolean showInventory, Integer page, Integer size) {
-        System.out.println("getAllBeers called with params: beerName=" + beerName + ", upc=" + upc + ", showInventory=" + showInventory + ", page=" + page + ", size=" + size);
+        log.debug("getAllBeers called with params: beerName={}, upc={}, showInventory={}, page={}, size={}", beerName, upc, showInventory, page, size);
         return withResilience(
                 () -> {
                     var url = UriComponentsBuilder.fromPath("/api/v1/beers")
