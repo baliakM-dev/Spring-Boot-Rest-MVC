@@ -273,3 +273,8 @@ docker compose up
 ```
 GET http://localhost:8084/actuator/health
 ```
+
+### 👤 Autor
+
+Ing. Martin Baliak
+Backend Developer – Spring Boot

@@ -6,23 +6,28 @@ services:
       MYSQL_DATABASE: restdb
       MYSQL_USER: restadmin
       MYSQL_PASSWORD: password
-    ports:
-      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot --silent" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
-  phpmyadmin:
-    image: phpmyadmin
+  adminer:
+    image: adminer:latest
     depends_on:
-      - db
-    environment:
-      PMA_HOST: db
+      db:
+        condition: service_healthy
     ports:
-      - "8081:80"
+      - "8081:8080"
 
   beer-store:
     build:
       context: ./beer-store
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -63,8 +68,13 @@ services:
       context: ./beer-client-restclient
     ports:
       - "8083:8083"
+      - "5004:5005"
     environment:
+      - SPRING_PROFILES_ACTIVE=dev
       - BEER_API_BASE_URL=http://beer-store:8080
+    volumes:
+      - ./beer-client-restclient:/app
+      - ~/.m2:/root/.m2
     depends_on:
       beer-store:
         condition: service_healthy
@@ -96,4 +106,5 @@ services:
       retries: 20
 
 volumes:
+  mysql_data:
   m2:
