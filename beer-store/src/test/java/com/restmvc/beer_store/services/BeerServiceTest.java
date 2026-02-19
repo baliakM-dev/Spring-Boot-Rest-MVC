@@ -1319,4 +1319,45 @@ class BeerServiceTest {
             verify(beerRepository).saveAndFlush(validBeer);
         }
     }
+
+    @Nested
+    @DisplayName("Delete Beer By Id Tests")
+    class DeleteBeerByIdTests {
+
+        @Test
+        @DisplayName("Should delete beer successfully when it exists")
+        void shouldDeleteBeerWhenExists() {
+            // Given
+            UUID beerId = validBeer.getId();
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.of(validBeer));
+            doNothing().when(beerRepository).deleteById(beerId);
+
+            // When
+            beerService.deleteBeerById(beerId);
+
+            // Then
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository).deleteById(beerId);
+            verifyNoInteractions(beerMapper);
+            verifyNoMoreInteractions(beerRepository);
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when beer does not exist")
+        void shouldThrowWhenBeerDoesNotExist() {
+            // Given
+            UUID beerId = UUID.randomUUID();
+            when(beerRepository.findWithCategoriesById(beerId)).thenReturn(Optional.empty());
+
+            // When / Then
+            assertThatThrownBy(() -> beerService.deleteBeerById(beerId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Beer")
+                    .hasMessageContaining(beerId.toString());
+
+            verify(beerRepository).findWithCategoriesById(beerId);
+            verify(beerRepository, never()).deleteById(any());
+            verifyNoInteractions(beerMapper);
+        }
+    }
 }

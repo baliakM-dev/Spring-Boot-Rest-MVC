@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,10 +31,12 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
      */
     boolean existsByBeerNameIgnoreCase(String beerName);
 
-
     /**
      * Checks whether a beer with the given name already exists,
      * excluding a specific entity by its identifier.
+     *
+     * <p>Used during update operations to allow a beer to keep its own name
+     * without triggering a false uniqueness conflict.</p>
      *
      * @param beerName name of the beer to check
      * @param id       identifier of the entity to exclude from the check
@@ -42,58 +45,73 @@ public interface BeerRepository extends JpaRepository<Beer, UUID> {
     boolean existsByBeerNameIgnoreCaseAndIdNot(String beerName, UUID id);
 
     /**
-     * Find all beers by beer name (case-insensitive).
+     * Find all beers whose name contains the given string (case-insensitive).
      *
-     * @param beerName the beer name to search for
-     * @param pageable pagination parameters
-     * @return a page of beers matching the name
+     * @param beerName the beer name substring to search for
+     * @param pageable pagination and sorting parameters
+     * @return a page of beers matching the name filter
      */
     Page<Beer> findAllByBeerNameContainingIgnoreCase(String beerName, Pageable pageable);
 
     /**
-     * Find all beers by upc (case-insensitive).
+     * Find all beers whose UPC contains the given string (case-insensitive).
      *
-     * @param upc      the UPC to search for
-     * @param pageable pagination parameters
-     * @return a page of beers matching the UPC
+     * @param upc      the UPC substring to search for
+     * @param pageable pagination and sorting parameters
+     * @return a page of beers matching the UPC filter
      */
     Page<Beer> findAllByUpcContainingIgnoreCase(String upc, Pageable pageable);
 
     /**
-     * Find all beers by beer name and upc (case-insensitive).
+     * Find all beers whose name and UPC both contain the given strings (case-insensitive).
      *
-     * @param beerName the beer name to search for
-     * @param upc      the upc to search for
-     * @param pageable pagination parameters
-     * @return a page of beers matching the name and UPC
+     * @param beerName the beer name substring to search for
+     * @param upc      the UPC substring to search for
+     * @param pageable pagination and sorting parameters
+     * @return a page of beers matching both filters
      */
     Page<Beer> findAllByBeerNameContainingIgnoreCaseAndUpcContainingIgnoreCase(String beerName, String upc, Pageable pageable);
 
     /**
-     * IMPORTANT:
-     * Do NOT use @EntityGraph or fetch join for collections (e.g. categories)
-     * on pageable queries.
-     * Hibernate cannot apply database-level pagination when a collection fetch
-     * (join fetch / entity graph) is used together with Pageable.
-     * This would trigger:
-     * HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
-     * Instead, we rely on LAZY loading + batch fetching (hibernate.default_batch_fetch_size)
-     * to efficiently load categories without N+1.
+     * Returns a paginated list of all beers without eagerly fetching collections.
      *
-     * @param pageable pagination parameters
+     * <p><b>IMPORTANT:</b> Do NOT use {@code @EntityGraph} or fetch join for collections
+     * (e.g. categories) on pageable queries. Hibernate cannot apply database-level
+     * pagination when a collection fetch (join fetch / entity graph) is combined with
+     * {@link Pageable}, which would trigger:
+     * <pre>HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory</pre>
+     * Instead, LAZY loading combined with {@code hibernate.default_batch_fetch_size} is used
+     * to load categories efficiently in a single {@code WHERE beer_id IN (...)} query.</p>
+     *
+     * @param pageable pagination and sorting parameters
      * @return a page of beers
      */
     Page<Beer> findAll(Pageable pageable);
 
     /**
-     * Loads Beer by id and eagerly fetches categories to avoid LazyInitializationException
+     * Loads a {@link Beer} by ID and eagerly fetches its categories using an entity graph.
      *
-     * @param id beer id
-     * @return a beer
+     * <p>Used for single-entity lookups (GET by ID, update, delete) where all
+     * category data is needed immediately to avoid {@code LazyInitializationException}.</p>
+     *
+     * @param id the UUID of the beer to load
+     * @return an {@link Optional} containing the beer with categories, or empty if not found
      */
     @EntityGraph(attributePaths = "categories")
     Optional<Beer> findWithCategoriesById(UUID id);
 
+    /**
+     * Find a paginated list of beers that belong to the given category.
+     *
+     * @param categoryId the UUID of the category to filter by
+     * @param pageable   pagination and sorting parameters
+     * @return a page of beers associated with the specified category
+     */
+    @Query("""
+            select b
+                from Beer b
+                join b.categories c
+                where c.id = :categoryId
+            """)
+    Page<Beer> findBeersByCategoryId(UUID categoryId, Pageable pageable);
 }
-
-
