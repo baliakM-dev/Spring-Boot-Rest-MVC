@@ -1,0 +1,31 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+
+  application:
+    name: beer-client-httpexchange
+  profiles:
+    active: dev
+
+server:
+  port: 8084
+
+resilience4j:
+  retry:
+    instances:
+      beerClient:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+  circuit breaker:
+    instances:
+      beerClient:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
+

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(./mvnw dependency:resolve:*)",
+      "Bash(./mvnw help:effective-pom:*)",
+      "Bash(./mvnw compile:*)"
+    ]
+  }
+}

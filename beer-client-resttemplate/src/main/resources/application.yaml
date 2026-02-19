@@ -1,0 +1,14 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+
+  application:
+    name: beer-client-resttemplate
+  profiles:
+    active: dev
+
+server:
+  port: 8082
+
+

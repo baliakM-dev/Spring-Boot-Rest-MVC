@@ -1,0 +1,35 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+
+  application:
+    name: beer-client-restclient
+  profiles:
+    active: dev
+
+server:
+  port: 8083
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      beerService:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+
+  retry:
+    instances:
+      beerService:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+  ratelimiter:
+    instances:
+      beerService:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
