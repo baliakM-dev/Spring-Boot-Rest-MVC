@@ -19,7 +19,7 @@ create table customers
 (
     customer_id varchar(36)  not null primary key,
     name        varchar(100) not null,
-    version     integer default null,
+    version     BIGINT,
     created_at  timestamp(6),
     updated_at  timestamp(6),
     constraint uk_customers_name unique (name)

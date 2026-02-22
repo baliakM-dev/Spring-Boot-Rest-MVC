@@ -254,6 +254,35 @@ public class GlobalExceptionsHandler {
     }
 
     /**
+     * Handles promotion code not found errors.
+     * Mapped to HTTP 404 Not Found — the code the customer entered does not exist.
+     */
+    @ExceptionHandler(PromoNotFoundException.class)
+    public ProblemDetail handlePromoNotFound(PromoNotFoundException ex, HttpServletRequest request) {
+        log.warn("Promotion not found: {}", ex.getMessage());
+        return createProblemDetail(
+                HttpStatus.NOT_FOUND,
+                "Promotion not found",
+                ex.getMessage(),
+                request);
+    }
+
+    /**
+     * Handles promotion validation failures (inactive, expired, max uses reached, etc.).
+     * Mapped to HTTP 422 Unprocessable Entity — the code exists but cannot be applied.
+     * The detail field contains the specific reason so the client can display it to the user.
+     */
+    @ExceptionHandler(PromoNotValidException.class)
+    public ProblemDetail handlePromoNotValid(PromoNotValidException ex, HttpServletRequest request) {
+        log.warn("Promotion not valid: {}", ex.getMessage());
+        return createProblemDetail(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Promotion cannot be applied",
+                ex.getMessage(),
+                request);
+    }
+
+    /**
      * Handles data integrity violations (e.g., unique constraint violation).
      *
      * <p>This handler is triggered when a database constraint is violated, typically during INSERT operations.</p>
@@ -284,6 +313,24 @@ public class GlobalExceptionsHandler {
                 ex.getMostSpecificCause().getMessage(),
                 request);
 
+    }
+
+    @ExceptionHandler(ActiveCartAlreadyExistsException.class)
+    public ProblemDetail handleActiveCartAlreadyExists(ActiveCartAlreadyExistsException ex, HttpServletRequest request) {
+        log.error("Active cart already exists: {}", ex.getMessage());
+        return createProblemDetail(HttpStatus.CONFLICT, "Active cart already exists", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EmptyCartException.class)
+    public ProblemDetail handleEmptyCart(EmptyCartException ex, HttpServletRequest request) {
+        log.error("Empty cart: {}", ex.getMessage());
+        return createProblemDetail(HttpStatus.BAD_REQUEST, "Empty cart", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InsufficientQuantityException.class)
+    public ProblemDetail handleInsufficientQuantity(InsufficientQuantityException ex, HttpServletRequest request) {
+        log.warn("Insufficient stock: {}", ex.getMessage());
+        return createProblemDetail(HttpStatus.UNPROCESSABLE_ENTITY, "Insufficient stock", ex.getMessage(), request);
     }
 
     /**

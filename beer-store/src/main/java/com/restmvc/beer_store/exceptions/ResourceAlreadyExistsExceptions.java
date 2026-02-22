@@ -29,4 +29,12 @@ public class ResourceAlreadyExistsExceptions extends RuntimeException {
     public ResourceAlreadyExistsExceptions(String resourceName, String fieldName, Object fieldValue) {
         super(String.format("%s with %s: %s already exists", resourceName, fieldName, fieldValue));
     }
+
+    /**
+     * Creates the exception with a structured message in the format:
+     * {@code "<customer> with <name>: <customerName> or  <email>: <customerEmail> already exists"}.
+     */
+    public ResourceAlreadyExistsExceptions(String customer, String name, String customerName, String email, String customerEmail) {
+        super(String.format("%s with %s: %s or  %s: %s already exists", customer, name, customerName, email, customerEmail));
+    }
 }
